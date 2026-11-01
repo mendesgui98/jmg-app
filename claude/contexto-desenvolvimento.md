@@ -4,6 +4,19 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-01 — Planejamento e Pendências (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** no menu Execução, depois de Cronogramas, um item Planejamento para planejar as obras por semana e por dia (tarefas urgentes e tarefas que precisam terminar para liberar outras) e um item Pendências. Decisões do Guilherme: a equipe vê os dois e marca tarefas; PDF para mandar às equipes (semana, obra, responsável); concluir tarefa não mexe no avanço (o cronograma continua por etapa); responsável do Cadastros ou nome livre; pendências automáticas junto; semana de segunda a domingo.
+
+**Decisões:**
+
+- Migração `20261101000040`: `work_tasks`, `work_task_dependencies` e `work_issues` com RLS operacional (admin/financeiro/equipe), auditoria em work_history e triggers: dependência só na mesma obra e sem ciclo; tarefa só conclui com as anteriores concluídas/canceladas e sem pendência aberta que a trave; quem concluiu/resolveu e quando vêm do banco.
+- Regras puras e testadas em `src/lib/planning.ts`; consulta única `planningOptions`.
+- Telas `/planejamento` (Semana com arrastar entre dias e Dia com "Feito", "Passar para hoje", sequência da obra e lista de espera), `/pendencias` (filtros por obra, quem resolve e pessoa; Resolver com observação; automáticas com "Ver origem") e `/planejamento/pdf` (folha da semana para a equipe).
+- Menu: Planejamento e Pendências depois de Cronogramas; no celular da equipe as abas viram Painel, Obras, Planejamento e Pendências.
+
+**Conferência:** testes de banco (PGlite), unitários (planning.test.ts), tipos, lint e build; telas conferidas no navegador com dados de exemplo.
+
 ### 2026-11-01 — Contas da empresa: conta obrigatória, recibo e contrato (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** o Guilherme pediu um card no Financeiro para cadastrar as contas da empresa, escolher a conta em toda entrada e saída e, ao gerar o contrato, um card para escolher qual conta vai no contrato. Decisões dele: conta obrigatória em todo lançamento novo; os antigos podem ter a conta editada para acertar o saldo; o recibo sai com a conta em que o dinheiro entrou; o PDF do orçamento não leva conta; admin e financeiro cadastram contas.

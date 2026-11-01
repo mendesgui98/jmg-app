@@ -1718,6 +1718,144 @@ export type Database = {
           },
         ];
       };
+      work_issues: {
+        Row: {
+          id: string;
+          work_id: string;
+          title: string;
+          notes: string | null;
+          owner_kind: string;
+          person_id: string | null;
+          responsible: string | null;
+          due_date: string | null;
+          priority: string;
+          blocks_task_id: string | null;
+          status: string;
+          resolution: string | null;
+          resolved_at: string | null;
+          resolved_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          work_id: string;
+          title: string;
+          notes?: string | null;
+          owner_kind?: string;
+          person_id?: string | null;
+          responsible?: string | null;
+          due_date?: string | null;
+          priority?: string;
+          blocks_task_id?: string | null;
+          status?: string;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          work_id?: string;
+          title?: string;
+          notes?: string | null;
+          owner_kind?: string;
+          person_id?: string | null;
+          responsible?: string | null;
+          due_date?: string | null;
+          priority?: string;
+          blocks_task_id?: string | null;
+          status?: string;
+          resolution?: string | null;
+          resolved_at?: string | null;
+          resolved_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
+      work_task_dependencies: {
+        Row: {
+          task_id: string;
+          depends_on_id: string;
+          created_at: string;
+        };
+        Insert: {
+          task_id: string;
+          depends_on_id: string;
+          created_at?: string;
+        };
+        Update: {
+          task_id?: string;
+          depends_on_id?: string;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+      work_tasks: {
+        Row: {
+          id: string;
+          work_id: string;
+          stage_id: string | null;
+          title: string;
+          notes: string | null;
+          planned_date: string | null;
+          person_id: string | null;
+          responsible: string | null;
+          priority: string;
+          status: string;
+          done_at: string | null;
+          done_by: string | null;
+          created_at: string;
+          created_by: string | null;
+          updated_at: string;
+          updated_by: string | null;
+        };
+        Insert: {
+          id?: string;
+          work_id: string;
+          stage_id?: string | null;
+          title: string;
+          notes?: string | null;
+          planned_date?: string | null;
+          person_id?: string | null;
+          responsible?: string | null;
+          priority?: string;
+          status?: string;
+          done_at?: string | null;
+          done_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Update: {
+          id?: string;
+          work_id?: string;
+          stage_id?: string | null;
+          title?: string;
+          notes?: string | null;
+          planned_date?: string | null;
+          person_id?: string | null;
+          responsible?: string | null;
+          priority?: string;
+          status?: string;
+          done_at?: string | null;
+          done_by?: string | null;
+          created_at?: string;
+          created_by?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+        };
+        Relationships: [];
+      };
       work_client_materials: {
         Row: {
           created_at: string;

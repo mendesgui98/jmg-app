@@ -1,5 +1,7 @@
 import {
   CalendarDays,
+  CircleAlert,
+  ListTodo,
   FileSignature,
   FileText,
   HardHat,
@@ -42,6 +44,8 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { to: "/obras", label: "Obras", icon: HardHat, color: "sky" },
       { to: "/cronogramas", label: "Cronogramas", icon: CalendarDays, color: "sky" },
+      { to: "/planejamento", label: "Planejamento", icon: ListTodo, color: "sky" },
+      { to: "/pendencias", label: "Pendências", icon: CircleAlert, color: "sky" },
     ],
   },
   {
@@ -86,7 +90,7 @@ export function mobileTabs(canSeeCosts: boolean): NavItem[] {
   const by = (to: string) => NAV_GROUPS.flatMap((g) => g.items).find((i) => i.to === to)!;
   return canSeeCosts
     ? [by("/painel"), by("/obras"), by("/orcamentos"), by("/financeiro")]
-    : [by("/painel"), by("/obras"), by("/cronogramas"), by("/cadastros")];
+    : [by("/painel"), by("/obras"), by("/planejamento"), by("/pendencias")];
 }
 
 export const isActive = (pathname: string, to: string) =>

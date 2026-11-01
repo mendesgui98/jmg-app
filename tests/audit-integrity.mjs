@@ -202,6 +202,53 @@ await rejects(
   [receivable, cash],
   /inativa/,
 );
+// Planejamento: dependências sem ciclo, conclusão só depois das anteriores e das pendências.
+const task = async (title) =>
+  value(
+    "INSERT INTO public.work_tasks(work_id,title,planned_date) VALUES($1,$2,'2026-11-03') RETURNING id",
+    [work, title],
+  );
+const pipes = await task("Tubulação");
+const waterproof = await task("Impermeabilizar");
+const tiles = await task("Revestimento");
+await db.query(
+  "INSERT INTO public.work_task_dependencies(task_id,depends_on_id) VALUES($1,$2),($3,$1)",
+  [waterproof, pipes, tiles],
+);
+await rejects(
+  "INSERT INTO public.work_task_dependencies(task_id,depends_on_id) VALUES($1,$2)",
+  [pipes, tiles],
+  /esperarem uma pela outra/,
+);
+await rejects(
+  "UPDATE public.work_tasks SET status='concluida' WHERE id=$1",
+  [waterproof],
+  /Conclua antes a tarefa "Tubulação"/,
+);
+await db.query("UPDATE public.work_tasks SET status='concluida' WHERE id=$1", [pipes]);
+assert.equal(await value("SELECT done_by FROM public.work_tasks WHERE id=$1", [pipes]), admin);
+await db.query("UPDATE public.work_tasks SET status='concluida' WHERE id=$1", [waterproof]);
+const issue = await value(
+  "INSERT INTO public.work_issues(work_id,title,owner_kind,blocks_task_id) VALUES($1,'Cliente escolher piso','cliente',$2) RETURNING id",
+  [work, tiles],
+);
+await rejects(
+  "UPDATE public.work_tasks SET status='concluida' WHERE id=$1",
+  [tiles],
+  /Resolva antes a pendência/,
+);
+await db.query(
+  "UPDATE public.work_issues SET status='resolvida', resolution='Escolhido' WHERE id=$1",
+  [issue],
+);
+assert.ok(await value("SELECT resolved_at FROM public.work_issues WHERE id=$1", [issue]));
+await db.query("UPDATE public.work_tasks SET status='concluida' WHERE id=$1", [tiles]);
+await db.query("UPDATE public.work_tasks SET status='a_fazer' WHERE id=$1", [tiles]);
+assert.equal(await value("SELECT done_at FROM public.work_tasks WHERE id=$1", [tiles]), null);
+assert.ok(
+  (await value("SELECT count(*)::int FROM public.work_history WHERE entity='work_tasks'")) >= 3,
+  "Tarefas ficam no histórico da obra",
+);
 const material = await value(
   "INSERT INTO public.materials(name,purchase_unit,consumption_unit) VALUES('M','un','un') RETURNING id",
 );
@@ -234,15 +281,27 @@ await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [team]);
 await db.exec("SET ROLE authenticated");
 assert.equal(await value("SELECT count(*)::int FROM public.work_registry"), 1);
 assert.equal(await value("SELECT count(*)::int FROM public.budgets"), 0);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.work_tasks"),
+  3,
+  "Equipe vê o planejamento",
+);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.work_issues"),
+  1,
+  "Equipe vê as pendências",
+);
+await db.query("UPDATE public.work_tasks SET status='concluida' WHERE title='Revestimento'");
 await rejects("SELECT public.save_service_composition(NULL,$1,$2)", [payload, []], /Sem permissão/);
 await db.exec("RESET ROLE");
 await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [pending]);
 await db.exec("SET ROLE authenticated");
 assert.equal(await value("SELECT count(*)::int FROM public.work_registry"), 0);
 assert.equal(await value("SELECT count(*)::int FROM storage.objects"), 0);
+assert.equal(await value("SELECT count(*)::int FROM public.work_tasks"), 0);
 await db.exec("RESET ROLE");
 console.log(
-  "PASS: registration, RLS profiles, approval, scoped items, evidence retention, locked budgets, conversion, revision uniqueness, allocations, company accounts, atomic composition and operational access",
+  "PASS: registration, RLS profiles, approval, scoped items, evidence retention, locked budgets, conversion, revision uniqueness, allocations, company accounts, work planning, atomic composition and operational access",
 );
 // Trash and permanent deletion exercise the same RPC used by the interface.
 await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [admin]);
