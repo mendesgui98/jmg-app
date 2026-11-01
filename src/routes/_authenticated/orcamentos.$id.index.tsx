@@ -33,6 +33,7 @@ import { DadosEditor } from "@/components/budgets/budget-details";
 import { MaterialsSummary } from "@/components/budgets/materials-summary";
 import { PricingPanel } from "@/components/budgets/pricing-panel";
 import { ScheduleEditor } from "@/components/budgets/schedule-editor";
+import { ProposalPreviewButton } from "@/components/budgets/proposal-preview";
 import { buildProposal, contractIssues, proposalIssues } from "@/lib/proposal";
 import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -264,6 +265,7 @@ function Editor() {
                 </Link>
               </Button>
             ))}
+          <ProposalPreviewButton budgetId={id} />
           {proposalIssues(proposal).length ? (
             <Button variant="outline" disabled title={proposalIssues(proposal).join(" ")}>
               <FileDown className="h-4 w-4" /> Gerar PDF

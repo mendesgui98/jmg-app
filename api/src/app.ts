@@ -165,6 +165,14 @@ export function createApp(deps: Deps) {
       log({ event: "proposal_pdf", by: s.claims.sub, budget: req.params["id"] });
       return pdfReply(file, `${data.number}.pdf`);
     })
+    // Prévia do orçamento na tela (mesmo modelo do PDF); mostra também o que falta para o PDF.
+    .add("POST", "/v1/orcamentos/:id/previa", async (req) => {
+      const { pdf, data } = await proposalData(req);
+      return json(200, {
+        html: pdf.proposalPreview(data, pdfLayout(req.query.get("layout"))),
+        issues: proposalIssues(data),
+      });
+    })
     .add("POST", "/v1/orcamentos/:id/contrato", async (req) => {
       const { s, pdf, data } = await proposalData(req);
       const issues = contractIssues(data);
