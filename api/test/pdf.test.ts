@@ -106,6 +106,7 @@ const api = await start({
   repo,
   today: () => "2026-10-28",
   pdf: {
+    proposalPreview: (d) => `<html><body>${d.number}</body></html>`,
     proposal: async (d, layout) => (
       rendered.push(d),
       layouts.push(layout),
@@ -245,4 +246,15 @@ test("contrato tem só as assinaturas do contratante e da contratada, sem testem
   assert.match(html, /CONTRATANTE/);
   assert.match(html, /CONTRATADA/);
   assert.equal(html.match(/<div class="signs">/g)?.length, 1);
+});
+
+test("prévia do orçamento: página do PDF na tela, mesmo com pendências", async () => {
+  current = input("elaboracao", 20);
+  const r = await post(`/v1/orcamentos/${ID}/previa`);
+  assert.equal(r.status, 200);
+  const body = (await r.json()) as { html: string; issues: string[] };
+  assert.match(body.html, /ORC-2026-0007/);
+  assert.match(body.issues.join(" "), /90%/);
+  assert.equal((await post(`/v1/orcamentos/${ID}/previa`, "eq")).status, 403);
+  current = input("elaboracao");
 });

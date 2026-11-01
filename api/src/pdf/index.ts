@@ -16,6 +16,8 @@ import { htmlToPdf } from "./render.ts";
 
 export type PdfService = {
   proposal(data: ProposalData, layout: PdfLayout): Promise<Buffer>;
+  /** Página do orçamento no modelo do PDF (prévia na tela, sem gerar o arquivo). */
+  proposalPreview(data: ProposalData, layout: PdfLayout): string;
   contract(
     data: ProposalData,
     today: string,
@@ -31,6 +33,7 @@ const footer = (d: ProposalData) =>
 
 export function createPdfService(): PdfService {
   return {
+    proposalPreview: (d, layout) => proposalHtml(d, loadAssets(), SCHEDULE_DISCLAIMER, layout),
     proposal: (d, layout) => {
       const assets = loadAssets();
       const title = `${d.number} · ${d.client.name}`;
