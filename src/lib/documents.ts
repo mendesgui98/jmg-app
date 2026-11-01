@@ -73,3 +73,38 @@ export function formatPhone(v: string | null | undefined) {
 export function formatCep(v: string | null | undefined) {
   return mask(digits(v).slice(0, 8), "00000-000");
 }
+
+/** Agência: até 4 dígitos; com o 5º vira agência com dígito (1234-5). */
+export function formatAgency(v: string | null | undefined) {
+  const chars = (v ?? "")
+    .toUpperCase()
+    .replace(/[^0-9X]/g, "")
+    .slice(0, 5);
+  return chars.length === 5 ? `${chars.slice(0, 4)}-${chars.slice(4)}` : chars;
+}
+
+/** Conta bancária: o último caractere é o dígito (pode ser X), separado por traço (39813290-9). */
+export function formatBankAccount(v: string | null | undefined) {
+  const chars = (v ?? "")
+    .toUpperCase()
+    .replace(/[^0-9X]/g, "")
+    .slice(0, 20);
+  return chars.length < 2 ? chars : `${chars.slice(0, -1)}-${chars.slice(-1)}`;
+}
+
+/** Chave PIX conforme o tipo: CPF, CNPJ e telefone pontuados; e-mail em minúsculas. */
+export function formatPixKey(type: string | null | undefined, v: string | null | undefined) {
+  const value = v ?? "";
+  switch (type) {
+    case "cpf":
+      return formatCpf(value);
+    case "cnpj":
+      return formatCnpj(value);
+    case "telefone":
+      return formatPhone(value);
+    case "email":
+      return value.trim().toLowerCase();
+    default:
+      return value.trim();
+  }
+}

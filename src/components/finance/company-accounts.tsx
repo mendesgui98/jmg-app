@@ -12,7 +12,8 @@ import {
   pixLine,
   type AccountKind,
 } from "@/lib/bank-accounts";
-import { formatCpfCnpj } from "@/lib/documents";
+import { formatAgency, formatBankAccount, formatCpfCnpj, formatPixKey } from "@/lib/documents";
+import { maskBRL, moneyText, parseBRL } from "@/lib/money";
 import { capitalizeWordsProps } from "@/lib/text-case";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -292,7 +293,7 @@ function toForm(a: CompanyAccount): Form {
     holder_document: a.holder_document ?? "",
     pix_key_type: a.pix_key_type ?? "",
     pix_key: a.pix_key ?? "",
-    opening_balance: String(a.opening_balance ?? ""),
+    opening_balance: moneyText(a.opening_balance),
     is_contract_default: a.is_contract_default,
   };
 }
@@ -347,13 +348,13 @@ function AccountForm({
         name: f.name.trim(),
         kind: f.kind,
         bank: cash ? null : opt(f.bank),
-        agency: cash ? null : opt(f.agency),
-        account_number: cash ? null : opt(f.account_number),
+        agency: cash ? null : opt(formatAgency(f.agency)),
+        account_number: cash ? null : opt(formatBankAccount(f.account_number)),
         holder: opt(f.holder),
         holder_document: f.holder_document.trim() ? formatCpfCnpj(f.holder_document) : null,
         pix_key_type: cash || !f.pix_key.trim() ? null : opt(f.pix_key_type),
-        pix_key: cash ? null : opt(f.pix_key),
-        opening_balance: Number(f.opening_balance.replace(",", ".")) || 0,
+        pix_key: cash || !f.pix_key_type ? null : opt(formatPixKey(f.pix_key_type, f.pix_key)),
+        opening_balance: parseBRL(f.opening_balance),
         is_contract_default: !cash && f.is_contract_default,
       };
       const r = account
@@ -369,6 +370,13 @@ function AccountForm({
     }
   }
 
+  // Pontuação automática enquanto digita (CPF/CNPJ, agência, conta, chave PIX e saldo).
+  const masks: Partial<Record<keyof Form, (v: string) => string>> = {
+    agency: formatAgency,
+    account_number: formatBankAccount,
+    pix_key: (v) =>
+      f.pix_key_type === "email" ? v.toLowerCase() : formatPixKey(f.pix_key_type, v),
+  };
   const text = (
     k: "name" | "bank" | "agency" | "account_number" | "holder" | "pix_key",
     label: string,
@@ -376,9 +384,14 @@ function AccountForm({
   ) => (
     <label className="block space-y-1 text-sm">
       <Label>{label}</Label>
-      <Input value={f[k]} onChange={(e) => set(k, e.target.value)} {...extra} />
+      <Input
+        value={f[k]}
+        onChange={(e) => set(k, masks[k]?.(e.target.value) ?? e.target.value)}
+        {...extra}
+      />
     </label>
   );
+  const numericPix = ["cpf", "cnpj", "telefone"].includes(f.pix_key_type);
 
   return (
     <SubmitForm onSubmit={() => void save()} pending={busy} className="grid gap-3">
@@ -410,8 +423,11 @@ function AccountForm({
           </p>
           <div className="grid gap-3 sm:grid-cols-[1.4fr_0.8fr_1fr]">
             {text("bank", "Banco", { placeholder: "Ex.: Banco C6" })}
-            {text("agency", "Agência", { inputMode: "numeric" })}
-            {text("account_number", "Conta")}
+            {text("agency", "Agência", { inputMode: "numeric", placeholder: "0001" })}
+            {text("account_number", "Conta", {
+              inputMode: "numeric",
+              placeholder: "39813290-9",
+            })}
           </div>
         </>
       )}
@@ -422,6 +438,7 @@ function AccountForm({
           <Input
             value={f.holder_document}
             inputMode="numeric"
+            placeholder="CPF ou CNPJ"
             onChange={(e) => set("holder_document", formatCpfCnpj(e.target.value))}
           />
         </label>
@@ -433,7 +450,15 @@ function AccountForm({
             <select
               className={selectClass}
               value={f.pix_key_type}
-              onChange={(e) => set("pix_key_type", e.target.value)}
+              onChange={(e) => {
+                const type = e.target.value;
+                // Ao escolher CPF/CNPJ, a chave já sai com o documento do titular.
+                const key =
+                  !f.pix_key.trim() && (type === "cpf" || type === "cnpj")
+                    ? f.holder_document
+                    : f.pix_key;
+                setF((p) => ({ ...p, pix_key_type: type, pix_key: formatPixKey(type, key) }));
+              }}
             >
               <option value="">Sem PIX</option>
               {PIX_KEY_TYPES.map((k) => (
@@ -443,16 +468,21 @@ function AccountForm({
               ))}
             </select>
           </label>
-          {text("pix_key", "Chave PIX", { disabled: !f.pix_key_type })}
+          {text("pix_key", "Chave PIX", {
+            disabled: !f.pix_key_type,
+            ...(numericPix ? { inputMode: "numeric" } : {}),
+            ...(f.pix_key_type === "email" ? { type: "email" } : {}),
+          })}
         </div>
       )}
       <label className="block max-w-56 space-y-1 text-sm">
         <Label>Saldo inicial (R$)</Label>
         <Input
-          type="number"
-          step="any"
+          className="num"
+          inputMode="numeric"
+          placeholder="R$ 0,00"
           value={f.opening_balance}
-          onChange={(e) => set("opening_balance", e.target.value)}
+          onChange={(e) => set("opening_balance", maskBRL(e.target.value))}
         />
       </label>
       {!cash && (
