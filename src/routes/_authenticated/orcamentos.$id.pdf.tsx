@@ -1,6 +1,6 @@
 import { pageMeta } from "@/lib/page-meta";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
 import { Download, ExternalLink, Landmark, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -90,6 +90,7 @@ function Pdf() {
   // Contrato gerado entra no menu Contratos: o PDF vai para o bucket privado e o banco registra o
   // contrato da obra (novo = aguardando assinatura; assinado não muda).
   const { data: me } = useMe();
+  const qc = useQueryClient();
   const registered = useRef<Blob | null>(null);
   const [contractState, setContractState] = useState<"" | "ok" | "sem-obra" | string>("");
   useEffect(() => {
@@ -103,19 +104,24 @@ function Pdf() {
           .upload(path, data.blob, { contentType: "application/pdf" });
         if (up.error) throw up.error;
         const code = /ORC-(\d{4}-\d+)/.exec(data.name)?.[1];
-        const r = await supabase.rpc("register_generated_contract", {
-          _budget_id: id,
-          _path: path,
-          _code: code ? `CT-${code}` : "",
-          ...(conta ? { _account_id: conta } : {}),
-        });
+        const base = { _budget_id: id, _path: path, _code: code ? `CT-${code}` : "" };
+        let r = await supabase.rpc(
+          "register_generated_contract",
+          conta ? { ...base, _account_id: conta } : base,
+        );
+        // Servidor com a lista de funções desatualizada (PGRST202): registra sem a conta; o PDF
+        // já saiu com os dados bancários escolhidos.
+        if (r.error && conta && r.error.code === "PGRST202")
+          r = await supabase.rpc("register_generated_contract", base);
         if (r.error) throw r.error;
         setContractState(r.data ? "ok" : "sem-obra");
+        void qc.invalidateQueries({ queryKey: ["relationships"] });
+        void qc.invalidateQueries({ queryKey: ["contract"] });
       } catch (e) {
         setContractState((e as Error).message);
       }
     })();
-  }, [doc, data, id, me?.canSeeCosts, conta]);
+  }, [doc, data, id, me?.canSeeCosts, conta, qc]);
 
   // Rotas /pdf ficam fora do menu do app (route.tsx), então a página tem a própria margem.
   return (

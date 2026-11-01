@@ -17,6 +17,11 @@ if ! compose up -d --no-build --remove-orphans; then
   exit 1
 fi
 
+# A API do banco (PostgREST) guarda a lista de tabelas e funções; recarrega depois das migrações
+# para que funções com assinatura nova (ex.: parâmetro novo) não fiquem "não encontradas".
+echo "==> Recarregando o cache do PostgREST"
+compose kill -s SIGUSR1 rest >/dev/null 2>&1 || echo "(não foi possível recarregar o rest; segue)"
+
 echo "==> Limpando imagens antigas"
 docker image prune -f >/dev/null
 compose ps --format 'table {{.Service}}\t{{.Status}}'
