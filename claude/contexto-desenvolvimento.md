@@ -4,6 +4,21 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-01 — Contas da empresa: conta obrigatória, recibo e contrato (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** o Guilherme pediu um card no Financeiro para cadastrar as contas da empresa, escolher a conta em toda entrada e saída e, ao gerar o contrato, um card para escolher qual conta vai no contrato. Decisões dele: conta obrigatória em todo lançamento novo; os antigos podem ter a conta editada para acertar o saldo; o recibo sai com a conta em que o dinheiro entrou; o PDF do orçamento não leva conta; admin e financeiro cadastram contas.
+
+**Decisões:**
+
+- Migração `20261101000039`: `financial_accounts` ganha tipo (corrente/poupança/caixa), banco, agência, conta, titular, CPF/CNPJ, tipo e chave PIX e `is_contract_default` (no máximo uma; marcar outra desmarca a anterior). Trigger `guard_financial_account` limpa dados bancários do caixa e exige banco+conta ou PIX na conta padrão. A conta C6 que estava fixa no código é completada (conta com "C6" no nome) ou criada quando não há nenhuma conta, e vira a padrão.
+- Conta obrigatória: trigger `settlements_require_account` (só INSERT, então baixas antigas sem conta continuam válidas) e `register_cash_movement` recusam movimentação sem conta ou com conta inativa. Correção da conta de baixas já lançadas por `set_settlement_account` (só muda a conta; histórico em `settlement_account_changes`).
+- `src/lib/bank-accounts.ts` (puro, compartilhado com a API): quadro do contrato (`contractBankRows`), bloco "Recebido em" do recibo (`receiptBankRows`), conta padrão (`defaultContractAccount`) e `COMPANY_ACCOUNT` (o C6 antigo, usado quando a baixa não tem conta ou o contrato é gerado sem escolher).
+- Financeiro: card "Contas da empresa" (`components/finance/company-accounts.tsx`) com saldo por conta, nova/editar/desativar (só com saldo zerado), contas inativas e aviso "N movimentações sem conta · ajustar" (filtra o caixa por "Sem conta"). Nos lançamentos a conta é um seletor obrigatório com o saldo de cada conta; cada movimentação do caixa e cada baixa tem o seletor "Conta: …" para corrigir. Filtro "Conta" no caixa.
+- Contrato: `/orcamentos/$id/pdf?doc=contrato` abre o card "Qual conta vai no contrato?" (`components/finance/contract-account-picker.tsx`) antes de gerar; a conta vai como `account_id` no corpo de `POST /v1/orcamentos/:id/contrato` e em `register_generated_contract(..., _account_id)`, que grava `contracts.bank_account_id` e a cópia `bank_account` (editar a conta depois não muda contrato gerado).
+- Recibo: `receiptInput` lê a conta da baixa e `buildReceipt` monta "Recebido em" com ela.
+
+**Conferência:** testes de banco (PGlite), unitários, API, tipos e lint passando; telas conferidas no navegador com dados de exemplo (sem Docker nesta sessão, então sem PDF real gerado).
+
 ### 2026-10-30 — Recibo de pagamento das entradas (branch `claude/eager-hopper-auxpdq`)
 
 **Pedido:** o Guilherme mandou `Recibo-JMG-modelo` e pediu que toda entrada da obra gere um recibo em PDF para o cliente, pelo caixa/fluxo de caixa. (Na conversa anterior o recibo só tinha sido proposto, não construído.)

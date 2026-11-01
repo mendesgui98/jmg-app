@@ -12,6 +12,7 @@ import {
   proposalIssues,
 } from "../../src/lib/proposal.ts";
 import { buildReceipt } from "../../src/lib/receipt.ts";
+import { COMPANY_ACCOUNT, hasBankData } from "../../src/lib/bank-accounts.ts";
 
 export type Deps = {
   jwtSecret: string;
@@ -41,6 +42,9 @@ const receiptSchema = z
       .optional(),
     transactionId: optText,
   })
+  .default({});
+const contractSchema = z
+  .object({ account_id: z.string().uuid("Conta inválida").optional() })
   .default({});
 const rolesSchema = z.object({ roles: z.array(z.enum(ROLES)).max(3) });
 
@@ -172,7 +176,25 @@ export function createApp(deps: Deps) {
           "incomplete",
           "Cadastre as cláusulas do contrato em Configurações → Contrato.",
         );
-      const file = await pdf.contract(data, today(), clauses, pdfLayout(req.query.get("layout")));
+      // Conta escolhida ao gerar (quadro "Dados bancários"); sem escolha, a conta C6 da JMG.
+      const account_id = parse(
+        contractSchema,
+        (await req.body().catch(() => ({}))) ?? {},
+      )?.account_id;
+      const bank = account_id ? await deps.repo.bankAccount(s.claims, account_id) : COMPANY_ACCOUNT;
+      if (!bank || !hasBankData(bank))
+        throw new HttpError(
+          422,
+          "incomplete",
+          "Escolha uma conta ativa com banco e conta ou chave PIX para o contrato.",
+        );
+      const file = await pdf.contract(
+        data,
+        today(),
+        clauses,
+        pdfLayout(req.query.get("layout")),
+        bank,
+      );
       log({ event: "contract_pdf", by: s.claims.sub, budget: req.params["id"] });
       return pdfReply(file, `Contrato-${data.number}.pdf`);
     })

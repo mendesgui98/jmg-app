@@ -45,6 +45,7 @@ export function fakeRepo(seed: Record<string, Role[]> = {}, mfa: string[] = []) 
     proposalInput: async () => null,
     receiptInput: async () => null,
     contractClauses: async () => [{ title: "Objetivo", body: "{{N}}.1. Reforma." }],
+    bankAccount: async () => null,
   };
   return repo;
 }

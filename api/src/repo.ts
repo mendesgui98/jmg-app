@@ -4,6 +4,7 @@ import { emptyParams } from "../../src/lib/pricing.ts";
 import type { ContractClause } from "../../src/lib/contract-clauses.ts";
 import type { ProposalInput, ProposalTerm } from "../../src/lib/proposal.ts";
 import type { ReceiptInput } from "../../src/lib/receipt.ts";
+import type { BankAccount } from "../../src/lib/bank-accounts.ts";
 
 // Consultas SQL da API. Mantidas aqui para os handlers ficarem testáveis com um repositório falso.
 
@@ -34,6 +35,8 @@ export type Repo = {
   proposalInput(claims: Claims, budgetId: string): Promise<Omit<ProposalInput, "today"> | null>;
   /** Cláusulas ativas do modelo de contrato, na ordem (Configurações → Contrato). */
   contractClauses(claims: Claims): Promise<ContractClause[]>;
+  /** Conta ativa da empresa escolhida para o contrato, lida como o usuário (RLS). */
+  bankAccount(claims: Claims, accountId: string): Promise<BankAccount | null>;
   /** Recebimento de uma entrada da obra e o que o recibo precisa, lido como o usuário (RLS). */
   receiptInput(
     claims: Claims,
@@ -103,12 +106,34 @@ export function createRepo(db: Db): Repo {
           select title, body from public.contract_clauses where active order by sort, created_at`;
         return rows.map((r) => ({ title: String(r["title"]), body: String(r["body"] ?? "") }));
       }),
+    bankAccount: (claims, accountId) =>
+      db.asUser(claims, async (tx) => {
+        const [a] = await tx`
+          select name, kind, bank, agency, account_number, holder, holder_document, pix_key_type, pix_key
+          from public.financial_accounts where id = ${accountId} and active`;
+        if (!a) return null;
+        const t = (k: string) => (a[k] as string | null) ?? null;
+        return {
+          name: String(a["name"]),
+          kind: t("kind"),
+          bank: t("bank"),
+          agency: t("agency"),
+          account_number: t("account_number"),
+          holder: t("holder"),
+          holder_document: t("holder_document"),
+          pix_key_type: t("pix_key_type"),
+          pix_key: t("pix_key"),
+        };
+      }),
     receiptInput: (claims, settlementId) =>
       db.asUser(claims, async (tx) => {
         const [s] = await tx`
-          select s.id, s.entry_id, s.amount, s.paid_date, s.payment_method, e.work_id, e.person_id
+          select s.id, s.entry_id, s.amount, s.paid_date, s.payment_method, e.work_id, e.person_id,
+                 a.name as account_name, a.kind as account_kind, a.bank, a.agency, a.account_number,
+                 a.holder, a.holder_document, a.pix_key_type, a.pix_key
           from public.financial_settlements s
           join public.financial_entries e on e.id = s.entry_id
+          left join public.financial_accounts a on a.id = s.account_id
           where s.id = ${settlementId} and e.direction = 'entrada' and not e.canceled`;
         if (!s) return null;
         const workId = (s["work_id"] as string | null) ?? null;
@@ -179,6 +204,19 @@ export function createRepo(db: Db): Repo {
               }
             : null,
           issuer: (me?.["full_name"] as string | null) ?? null,
+          account: s["account_name"]
+            ? {
+                name: String(s["account_name"]),
+                kind: (s["account_kind"] as string | null) ?? null,
+                bank: (s["bank"] as string | null) ?? null,
+                agency: (s["agency"] as string | null) ?? null,
+                account_number: (s["account_number"] as string | null) ?? null,
+                holder: (s["holder"] as string | null) ?? null,
+                holder_document: (s["holder_document"] as string | null) ?? null,
+                pix_key_type: (s["pix_key_type"] as string | null) ?? null,
+                pix_key: (s["pix_key"] as string | null) ?? null,
+              }
+            : null,
         };
       }),
     proposalInput: (claims, budgetId) =>

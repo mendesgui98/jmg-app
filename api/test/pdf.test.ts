@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { after, test } from "node:test";
 import { DEFAULT_TERMS, type ProposalData, type ProposalInput } from "../../src/lib/proposal.ts";
 import type { ReceiptData } from "../../src/lib/receipt.ts";
+import type { BankAccount } from "../../src/lib/bank-accounts.ts";
 import { emptyParams } from "../../src/lib/pricing.ts";
 import { fakeRepo, start, token } from "./helpers.ts";
 
@@ -53,6 +54,7 @@ const input = (status: string, pct = 30): Omit<ProposalInput, "today"> => ({
 let current = input("elaboracao");
 const rendered: ProposalData[] = [];
 const layouts: string[] = [];
+const banks: BankAccount[] = [];
 const receipts: ReceiptData[] = [];
 const repo = fakeRepo({ adm: ["admin"], eq: ["equipe"] });
 repo.proposalInput = async (_c, id) => (id === ID ? current : null);
@@ -75,8 +77,31 @@ repo.receiptInput = async (_c, id) =>
         client: { name: "Cliente", document: null },
         budget: { number: 7, issue_date: "2026-10-28", payment_terms: DEFAULT_TERMS },
         issuer: null,
+        account: {
+          name: "Itaú PJ",
+          bank: "Itaú",
+          agency: "1234",
+          account_number: "5678-9",
+          holder: "JMG Reformas LTDA",
+          holder_document: "62.780.542/0001-81",
+        },
       }
     : null;
+const ITAU = "bbbbbbbb-1111-2222-3333-444444444444";
+const CAIXA = "cccccccc-1111-2222-3333-444444444444";
+repo.bankAccount = async (_c, id) =>
+  id === ITAU
+    ? {
+        name: "Itaú PJ",
+        bank: "Itaú",
+        agency: "1234",
+        account_number: "5678-9",
+        pix_key: "f@jmg.local",
+        pix_key_type: "email",
+      }
+    : id === CAIXA
+      ? { name: "Caixa", kind: "caixa" }
+      : null;
 const api = await start({
   repo,
   today: () => "2026-10-28",
@@ -86,9 +111,10 @@ const api = await start({
       layouts.push(layout),
       Buffer.from("%PDF-orcamento")
     ),
-    contract: async (d, _today, _clauses, layout) => (
+    contract: async (d, _today, _clauses, layout, bank) => (
       rendered.push(d),
       layouts.push(layout),
+      banks.push(bank),
       Buffer.from("%PDF-contrato")
     ),
     receipt: async (d) => (receipts.push(d), Buffer.from("%PDF-recibo")),
@@ -145,6 +171,25 @@ test("contrato só sai de orçamento aprovado", async () => {
   assert.equal(layouts.at(-1), "paginado");
 });
 
+test("contrato sai com a conta escolhida e recusa conta sem dados bancários", async () => {
+  current = input("aprovado");
+  const call = (account_id: string) =>
+    api.call(`/v1/orcamentos/${ID}/contrato`, {
+      method: "POST",
+      auth: token({ sub: "adm" }),
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ account_id }),
+    });
+  assert.equal((await call(ITAU)).status, 200);
+  assert.equal(banks.at(-1)?.bank, "Itaú");
+  const caixa = await call(CAIXA);
+  assert.equal(caixa.status, 422);
+  assert.match((await caixa.json()).message, /chave PIX/);
+  assert.equal((await call("99999999-2222-3333-4444-555555555555")).status, 422);
+  assert.equal((await post(`/v1/orcamentos/${ID}/contrato`)).status, 200);
+  assert.equal(banks.at(-1)?.bank, "Banco C6");
+});
+
 test("orçamento inexistente devolve 404", async () => {
   assert.equal((await post("/v1/orcamentos/99999999-2222-3333-4444-555555555555/pdf")).status, 404);
 });
@@ -172,6 +217,10 @@ test("recibo do recebimento de uma entrada, com os dados opcionais do pagador", 
     ["Cliente", "Banco Itaú"],
   );
   assert.equal(d.amountWords, "mil reais");
+  assert.deepEqual(
+    d.receivedIn.map((x) => x.value),
+    ["JMG Reformas LTDA", "62.780.542/0001-81", "Itaú", "1234 · 5678-9"],
+  );
 });
 
 test("recibo: equipe não gera e recebimento desconhecido devolve 404", async () => {

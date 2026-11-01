@@ -131,6 +131,77 @@ await rejects(
   /rateado/,
 );
 await db.query("UPDATE public.financial_entries SET amount=120 WHERE id=$1", [entry]);
+// Contas da empresa: conta obrigatória, correção da conta e conta padrão do contrato.
+const c6 = await value("SELECT id FROM public.financial_accounts WHERE is_contract_default");
+assert.ok(c6, "A conta C6 nasce como padrão do contrato");
+assert.equal(
+  await value("SELECT bank FROM public.financial_accounts WHERE id=$1", [c6]),
+  "Banco C6",
+);
+const other = await value(
+  "INSERT INTO public.financial_accounts(name,bank,agency,account_number,pix_key_type,pix_key,is_contract_default) VALUES('Itaú PJ','Itaú','1234','5678-9','email','f@jmg.local',true) RETURNING id",
+);
+assert.equal(
+  await value("SELECT is_contract_default FROM public.financial_accounts WHERE id=$1", [c6]),
+  false,
+);
+const cash = await value(
+  "INSERT INTO public.financial_accounts(name,kind,bank,is_contract_default) VALUES('Caixa','caixa','X',true) RETURNING id",
+);
+assert.equal(
+  await value(
+    "SELECT bank IS NULL AND NOT is_contract_default FROM public.financial_accounts WHERE id=$1",
+    [cash],
+  ),
+  true,
+);
+await rejects(
+  "INSERT INTO public.financial_accounts(name,is_contract_default) VALUES('Sem dados',true)",
+  [],
+  /banco e conta ou de uma chave PIX/,
+);
+const receivable = await value(
+  "INSERT INTO public.financial_entries(description,direction,amount,due_date,work_id) VALUES('Parcela','entrada',300,'2026-10-25',$1) RETURNING id",
+  [work],
+);
+await rejects(
+  "INSERT INTO public.financial_settlements(entry_id,amount,paid_date) VALUES($1,100,'2026-10-26')",
+  [receivable],
+  /Selecione a conta/,
+);
+await rejects(
+  "SELECT public.register_cash_movement(gen_random_uuid(),'saida','2026-10-26','Sem conta',10,'Outras','',NULL,NULL,NULL,'')",
+  [],
+  /Selecione a conta/,
+);
+const settled = await value(
+  "INSERT INTO public.financial_settlements(entry_id,account_id,amount,paid_date) VALUES($1,$2,100,'2026-10-26') RETURNING id",
+  [receivable, c6],
+);
+await rejects(
+  "UPDATE public.financial_settlements SET account_id=$2 WHERE id=$1",
+  [settled, other],
+  /permission denied/,
+);
+await db.query("SELECT public.set_settlement_account($1,$2)", [settled, other]);
+assert.equal(
+  await value("SELECT account_id FROM public.financial_settlements WHERE id=$1", [settled]),
+  other,
+);
+assert.equal(
+  await value(
+    "SELECT old_account_id FROM public.settlement_account_changes WHERE settlement_id=$1",
+    [settled],
+  ),
+  c6,
+);
+await db.query("UPDATE public.financial_accounts SET active=false WHERE id=$1", [cash]);
+await rejects("SELECT public.set_settlement_account($1,$2)", [settled, cash], /conta ativa/);
+await rejects(
+  "INSERT INTO public.financial_settlements(entry_id,account_id,amount,paid_date) VALUES($1,$2,10,'2026-10-26')",
+  [receivable, cash],
+  /inativa/,
+);
 const material = await value(
   "INSERT INTO public.materials(name,purchase_unit,consumption_unit) VALUES('M','un','un') RETURNING id",
 );
@@ -171,7 +242,7 @@ assert.equal(await value("SELECT count(*)::int FROM public.work_registry"), 0);
 assert.equal(await value("SELECT count(*)::int FROM storage.objects"), 0);
 await db.exec("RESET ROLE");
 console.log(
-  "PASS: registration, RLS profiles, approval, scoped items, evidence retention, locked budgets, conversion, revision uniqueness, allocations, atomic composition and operational access",
+  "PASS: registration, RLS profiles, approval, scoped items, evidence retention, locked budgets, conversion, revision uniqueness, allocations, company accounts, atomic composition and operational access",
 );
 // Trash and permanent deletion exercise the same RPC used by the interface.
 await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [admin]);

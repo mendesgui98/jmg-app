@@ -1,10 +1,12 @@
 // Recibo de pagamento (modelo JMG "Recibo-JMG-modelo"): um recibo por recebimento (baixa) de uma
 // entrada da obra. Módulo puro e sem dependências, usado pela API (PDF) e pelo app: número do
 // recibo, valor por extenso, parcela a que se refere e a situação financeira do contrato até a
-// data do pagamento (parcelas pagas, este recibo e a receber).
+// data do pagamento (parcelas pagas, este recibo e a receber). "Recebido em" mostra a conta da
+// empresa em que o dinheiro entrou (a conta escolhida na baixa).
 
 import { reaisPorExtenso } from "./extenso.ts";
 import { COMPANY, proposalNumber, type ProposalTerm } from "./proposal.ts";
+import { COMPANY_ACCOUNT, receiptBankRows, type BankAccount } from "./bank-accounts.ts";
 
 export interface ReceiptSettlement {
   id: string;
@@ -35,6 +37,8 @@ export interface ReceiptInput {
   client: { name: string; document: string | null } | null;
   budget: { number: number; issue_date: string; payment_terms: ProposalTerm[] } | null;
   issuer: string | null;
+  /** Conta da empresa em que o dinheiro entrou (baixa antiga sem conta: a conta C6 da JMG). */
+  account?: BankAccount | null;
   /** Dados opcionais informados ao gerar (conta de origem e ID da transação). */
   payer?: { name?: string; document?: string; bank?: string; account?: string } | undefined;
   transactionId?: string | undefined;
@@ -179,12 +183,7 @@ export function buildReceipt(input: ReceiptInput): ReceiptData {
     work: input.work,
     hasContract: !!input.work && ordered.some((e) => !e.cash_only),
     paidBy,
-    receivedIn: [
-      { label: "Favorecido", value: c.name },
-      { label: "CNPJ", value: c.cnpj },
-      { label: "Banco", value: c.bank },
-      { label: "Agência / conta", value: `${c.agency} · ${c.account}` },
-    ],
+    receivedIn: receiptBankRows(input.account ?? COMPANY_ACCOUNT),
     transactionId: input.transactionId?.trim() || null,
     summary: {
       contract,

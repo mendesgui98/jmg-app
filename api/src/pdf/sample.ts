@@ -6,6 +6,7 @@ import { buildProposal, DEFAULT_TERMS } from "../../../src/lib/proposal.ts";
 import { emptyParams } from "../../../src/lib/pricing.ts";
 import { createPdfService } from "./index.ts";
 import { closeBrowser } from "./render.ts";
+import { COMPANY_ACCOUNT } from "../../../src/lib/bank-accounts.ts";
 
 const mat = (name: string, unit: string, price: number, consumption: number) => ({
   name,
@@ -132,6 +133,7 @@ writeFileSync(
           ? JSON.parse(readFileSync(process.env["CLAUSES_JSON"], "utf8"))
           : SAMPLE_CLAUSES,
         layout,
+        COMPANY_ACCOUNT,
       )
     : await pdf.proposal(data, layout),
 );
