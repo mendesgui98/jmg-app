@@ -48,6 +48,34 @@ describe("recibo de pagamento", () => {
     expect(r.paidBy.map((x) => x.label)).toEqual(["Titular", "CPF/CNPJ"]);
   });
 
+  it("mostra a conta em que o dinheiro entrou (sem conta: a conta C6 de antes)", () => {
+    const itau = buildReceipt({
+      ...input,
+      account: {
+        name: "Itaú PJ",
+        bank: "Itaú",
+        agency: "1234",
+        account_number: "5678-9",
+        holder: "JMG Reformas LTDA",
+        holder_document: "62.780.542/0001-81",
+      },
+    });
+    expect(itau.receivedIn).toEqual([
+      { label: "Favorecido", value: "JMG Reformas LTDA" },
+      { label: "CNPJ", value: "62.780.542/0001-81" },
+      { label: "Banco", value: "Itaú" },
+      { label: "Agência / conta", value: "1234 · 5678-9" },
+    ]);
+    expect(buildReceipt(input).receivedIn.map((x) => x.value)).toEqual([
+      "JMG Reformas LTDA",
+      "62.780.542/0001-81",
+      "Banco C6",
+      "0001 · 39813290-9",
+    ]);
+    const cash = buildReceipt({ ...input, account: { name: "Caixa", kind: "caixa" } });
+    expect(cash.receivedIn.at(-1)).toEqual({ label: "Conta", value: "Caixa (dinheiro)" });
+  });
+
   it("recibo de uma baixa antiga não conta pagamentos posteriores", () => {
     const later = [
       ...settlements,

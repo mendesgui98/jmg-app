@@ -5,6 +5,11 @@ import {
   type ContractClause,
 } from "../../../src/lib/contract-clauses.ts";
 import type { PdfLayout, ProposalData } from "../../../src/lib/proposal.ts";
+import {
+  COMPANY_ACCOUNT,
+  contractBankRows,
+  type BankAccount,
+} from "../../../src/lib/bank-accounts.ts";
 import type { Assets } from "./assets.ts";
 import {
   BLUE,
@@ -119,6 +124,7 @@ export function contractHtml(
   today: string,
   clauses: ContractClause[],
   layout: PdfLayout = "continuo",
+  account: BankAccount = COMPANY_ACCOUNT,
 ) {
   const client = d.client;
   const c = d.company;
@@ -164,8 +170,10 @@ ${d.stages.map((s) => `<tr><td><span class="badge dot" style="background:${stage
 </tbody></table>`;
   const payments = `${d.payments.map((r) => `<div class="pay"><div class="p">${pct(r.pct)}</div><div class="t"><b>${esc(r.label)}</b>${r.when ? `<span>${esc(r.when)}</span>` : ""}</div><div class="v nb">${money(r.value)}</div></div>`).join("")}
 <div class="pay-total"><span>Total</span><span class="nb">${money(d.totals.total)}</span></div>`;
-  const pix = c.pix === c.cnpj ? `${c.pix} (CNPJ)` : c.pix;
-  const bank = `<div class="bank"><div><span>Favorecido</span><b>${esc(c.name)}</b></div><div><span>CNPJ</span><b>${esc(c.cnpj)}</b></div><div><span>Chave PIX</span><b>${esc(pix)}</b></div><div><span>Banco</span><b>${esc(c.bank)}</b></div><div><span>Agência</span><b>${esc(c.agency)}</b></div><div><span>Conta corrente</span><b>${esc(c.account)}</b></div></div>`;
+  // Quadro com a conta escolhida ao gerar o contrato.
+  const bank = `<div class="bank">${contractBankRows(account)
+    .map((r) => `<div><span>${esc(r.label)}</span><b>${esc(r.value)}</b></div>`)
+    .join("")}</div>`;
   const description = d.description.trim().replace(/[.;\s]+$/, "");
   const rendered = renderClauses(clauses, {
     OBJETO: esc(

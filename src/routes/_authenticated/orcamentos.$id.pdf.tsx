@@ -1,8 +1,8 @@
 import { pageMeta } from "@/lib/page-meta";
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useEffect, useRef, useState } from "react";
-import { Download, ExternalLink, RefreshCw } from "lucide-react";
+import { Download, ExternalLink, Landmark, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Notice } from "@/components/kpi";
 import { PageSkeleton } from "@/components/feedback";
@@ -10,10 +10,14 @@ import { apiConfigured, apiFile } from "@/lib/api-client";
 import { pdfLayout, type PdfLayout } from "@/lib/proposal";
 import { supabase } from "@/integrations/supabase/client";
 import { useMe } from "@/hooks/use-me";
+import { ContractAccountPicker } from "@/components/finance/contract-account-picker";
+import { contractAccountsOptions } from "@/lib/finance-data";
 
 // Visualiza o PDF oficial gerado pela API (modelo JMG): orçamento ou, com ?doc=contrato, o
 // contrato do orçamento aprovado; em página contínua ou, com ?layout=paginado, em folhas A4.
-// Custos internos nunca entram nesses documentos.
+// Custos internos nunca entram nesses documentos. O contrato abre antes o card "Qual conta vai no
+// contrato?" (?conta=<id>): a conta escolhida sai no quadro "Dados bancários" e fica gravada no
+// registro do contrato.
 
 type Doc = "orcamento" | "contrato";
 
@@ -22,11 +26,18 @@ const LAYOUTS: { value: PdfLayout; label: string }[] = [
   { value: "paginado", label: "Com quebra de página" },
 ];
 
+const UUID = /^[0-9a-f-]{36}$/i;
+
 export const Route = createFileRoute("/_authenticated/orcamentos/$id/pdf")({
   head: () => pageMeta("PDF do orçamento", "Documento oficial da JMG gerado pelo sistema."),
-  validateSearch: (s: Record<string, unknown>): { doc?: Doc; layout?: "paginado" } => ({
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): { doc?: Doc; layout?: "paginado"; conta?: string } => ({
     ...(s["doc"] === "contrato" ? { doc: "contrato" as const } : {}),
     ...(pdfLayout(s["layout"]) === "paginado" ? { layout: "paginado" as const } : {}),
+    ...(s["doc"] === "contrato" && typeof s["conta"] === "string" && UUID.test(s["conta"])
+      ? { conta: s["conta"] }
+      : {}),
   }),
   component: Pdf,
 });
@@ -34,21 +45,41 @@ export const Route = createFileRoute("/_authenticated/orcamentos/$id/pdf")({
 function Pdf() {
   const { id } = Route.useParams();
   const search = Route.useSearch();
-  const { doc = "orcamento" } = search;
+  const { doc = "orcamento", conta } = search;
   const layout = pdfLayout(search.layout);
   const label = doc === "contrato" ? "Contrato" : "Orçamento";
+  const navigate = useNavigate();
+  const isContract = doc === "contrato";
+  // Contrato: escolhe a conta antes de gerar; "Trocar conta" reabre o card.
+  const [picking, setPicking] = useState(false);
+  const { data: accounts } = useQuery({ ...contractAccountsOptions, enabled: isContract });
+  const account = accounts?.find((a) => a.id === conta);
   const { data, error, isFetching, refetch } = useQuery({
-    queryKey: ["budget-pdf", id, doc, layout],
-    enabled: apiConfigured,
+    queryKey: ["budget-pdf", id, doc, layout, conta ?? ""],
+    enabled: apiConfigured && (!isContract || !!conta),
     retry: false,
     gcTime: 0,
     queryFn: () =>
       apiFile(
         "POST",
-        `/v1/orcamentos/${id}/${doc === "contrato" ? "contrato" : "pdf"}${layout === "paginado" ? "?layout=paginado" : ""}`,
+        `/v1/orcamentos/${id}/${isContract ? "contrato" : "pdf"}${layout === "paginado" ? "?layout=paginado" : ""}`,
         `${label}.pdf`,
+        isContract ? { account_id: conta } : undefined,
       ),
   });
+  const chooseAccount = (accountId: string) => {
+    setPicking(false);
+    void navigate({
+      to: "/orcamentos/$id/pdf",
+      params: { id },
+      search: {
+        doc: "contrato",
+        conta: accountId,
+        ...(search.layout ? { layout: "paginado" } : {}),
+      },
+      replace: true,
+    });
+  };
   const [url, setUrl] = useState("");
   useEffect(() => {
     if (!data) return;
@@ -76,6 +107,7 @@ function Pdf() {
           _budget_id: id,
           _path: path,
           _code: code ? `CT-${code}` : "",
+          ...(conta ? { _account_id: conta } : {}),
         });
         if (r.error) throw r.error;
         setContractState(r.data ? "ok" : "sem-obra");
@@ -83,7 +115,7 @@ function Pdf() {
         setContractState((e as Error).message);
       }
     })();
-  }, [doc, data, id, me?.canSeeCosts]);
+  }, [doc, data, id, me?.canSeeCosts, conta]);
 
   // Rotas /pdf ficam fora do menu do app (route.tsx), então a página tem a própria margem.
   return (
@@ -122,7 +154,7 @@ function Pdf() {
                   to="/orcamentos/$id/pdf"
                   params={{ id }}
                   search={{
-                    ...(doc === "contrato" ? { doc } : {}),
+                    ...(doc === "contrato" ? { doc, ...(conta ? { conta } : {}) } : {}),
                     ...(l.value === "paginado" ? { layout: "paginado" as const } : {}),
                   }}
                   replace
@@ -132,11 +164,17 @@ function Pdf() {
               </Button>
             ))}
           </div>
+          {isContract && (
+            <Button type="button" variant="outline" onClick={() => setPicking(true)}>
+              <Landmark className="h-4 w-4" />
+              {account ? `Conta: ${account.name} · trocar` : "Escolher conta"}
+            </Button>
+          )}
           <Button
             type="button"
             variant="outline"
             onClick={() => void refetch()}
-            disabled={isFetching}
+            disabled={isFetching || (isContract && !conta)}
           >
             <RefreshCw className={isFetching ? "h-4 w-4 animate-spin" : "h-4 w-4"} /> Gerar de novo
           </Button>
@@ -173,6 +211,22 @@ function Pdf() {
       )}
       {contractState && contractState !== "ok" && contractState !== "sem-obra" && (
         <Notice tone="negative">Não foi possível registrar o contrato: {contractState}</Notice>
+      )}
+      {isContract && (
+        <ContractAccountPicker
+          open={picking || !conta}
+          current={conta}
+          onChoose={chooseAccount}
+          onCancel={() => {
+            if (conta) setPicking(false);
+            else void navigate({ to: "/orcamentos/$id", params: { id } });
+          }}
+        />
+      )}
+      {isContract && !conta && (
+        <Notice tone="alert">
+          Escolha a conta da empresa que vai no contrato para gerar o PDF.
+        </Notice>
       )}
       {!apiConfigured && (
         <Notice tone="negative">A API não está configurada (VITE_API_URL).</Notice>

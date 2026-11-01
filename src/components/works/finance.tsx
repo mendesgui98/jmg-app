@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import {
   AlertTriangle,
   ArrowDown,
-  ArrowLeftRight,
   ArrowUp,
   Ban,
   CalendarClock,
@@ -47,6 +46,7 @@ import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { IconBubble, KpiCard, Money, Segmented } from "@/components/kpi";
 import { panelClass, segmentClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
+import { CompanyAccounts } from "@/components/finance/company-accounts";
 type Entry = Database["public"]["Tables"]["financial_entries"]["Row"];
 type Tab = "caixa" | "receber" | "pagar";
 
@@ -93,6 +93,8 @@ export function Finance({ workId }: { workId?: string }) {
   const [category, setCategory] = useState("");
   const [status, setStatus] = useState("abertas");
   const [type, setType] = useState("");
+  // Conta da movimentação no caixa: "" todas, "sem" sem conta, ou o id da conta.
+  const [accountFilter, setAccountFilter] = useState("");
   const today = businessDate();
   const range =
     period === "personalizado" ? { from: customFrom, to: customTo } : periodRange(period);
@@ -116,7 +118,25 @@ export function Finance({ workId }: { workId?: string }) {
     (m) =>
       inPeriod(m.date, range.from, range.to) &&
       (!category || m.category === category) &&
-      (!type || m.direction === type),
+      (!type || m.direction === type) &&
+      (!accountFilter ||
+        (accountFilter === "sem" ? !m.account_id : m.account_id === accountFilter)),
+  );
+  const activeAccounts = (data?.accounts ?? []).filter((a) => a.active);
+  const accountName = (id: string | null) =>
+    data?.accounts.find((a) => a.id === id)?.name ?? "Conta";
+  const unassignedSettlements = settlements.filter((s) => !s.account_id);
+  const unassigned = {
+    count: unassignedSettlements.length,
+    amount: unassignedSettlements.reduce((t, s) => t + s.amount, 0),
+  };
+  const balances = new Map(
+    data
+      ? accountBalances(data.accounts, data.entries, data.settlements, data.transfers).map((a) => [
+          a.id,
+          a.balance,
+        ])
+      : [],
   );
   const accounts = (direction: "entrada" | "saida") =>
     allEntries
@@ -252,11 +272,7 @@ export function Finance({ workId }: { workId?: string }) {
     try {
       let r: { error: { message: string } | null };
       let receiptFor: string | null = null;
-      if (dialog === "account") {
-        r = await supabase
-          .from("financial_accounts")
-          .insert({ name: text(d, "name"), opening_balance: number(d, "opening") });
-      } else if (dialog === "cash") {
+      if (dialog === "cash") {
         r = await supabase.rpc("register_cash_movement", {
           _request_id: requestId,
           _direction: entryDirection,
@@ -265,7 +281,7 @@ export function Finance({ workId }: { workId?: string }) {
           _amount: number(d, "amount"),
           _category: text(d, "category"),
           _payment_method: text(d, "method"),
-          _account_id: (text(d, "account") || null) as string,
+          _account_id: text(d, "account"),
           _work_id: (workId || text(d, "work") || null) as string,
           _person_id: (text(d, "person") || null) as string,
           _notes: text(d, "notes"),
@@ -294,7 +310,7 @@ export function Finance({ workId }: { workId?: string }) {
           .from("financial_settlements")
           .insert({
             entry_id: entry.id,
-            account_id: text(d, "account") || null,
+            account_id: text(d, "account"),
             amount: number(d, "amount"),
             paid_date: text(d, "date"),
             file_path: path,
@@ -399,18 +415,85 @@ export function Finance({ workId }: { workId?: string }) {
     else refresh();
   }
 
-  const accountSelect = (name: string, label: string, optional = false) => (
+  // Conta é obrigatória em toda movimentação: em qual conta entrou ou de qual saiu.
+  const accountPicker = (name: string, label: string) => (
+    <fieldset className="space-y-1.5 text-sm">
+      <legend className="mb-1.5">
+        {label} <span className="text-negative">*</span>
+      </legend>
+      {activeAccounts.length ? (
+        <div className="grid grid-cols-2 gap-2">
+          {activeAccounts.map((a, i) => (
+            <label
+              key={a.id}
+              className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
+            >
+              <input type="radio" name={name} value={a.id} required={i === 0} className="sr-only" />
+              <IconBubble
+                icon={a.kind === "caixa" ? Wallet : Landmark}
+                tone={a.kind === "caixa" ? "positive" : "brand"}
+                className="h-7 w-7 shrink-0 rounded-md"
+              />
+              <span className="min-w-0 leading-tight">
+                <span className="block truncate font-medium">{a.name}</span>
+                <span className="block text-xs text-muted-foreground tabular-nums">
+                  {brl(balances.get(a.id) ?? 0)}
+                </span>
+              </span>
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="rounded-lg bg-alert-soft p-2 text-xs text-alert">
+          Cadastre uma conta em Financeiro → Contas da empresa antes de lançar.
+        </p>
+      )}
+    </fieldset>
+  );
+  const transferSelect = (name: string, label: string) => (
     <label className="block text-sm">
-      {label}
-      <select name={name} required={!optional} className={selectClass}>
-        <option value="">{optional ? "Não informar" : "Selecionar conta"}</option>
-        {data?.accounts.map((a) => (
+      {label} <span className="text-negative">*</span>
+      <select name={name} required className={selectClass}>
+        <option value="">Selecionar conta</option>
+        {activeAccounts.map((a) => (
           <option key={a.id} value={a.id}>
-            {a.name}
+            {a.name} · {fmtBRL(balances.get(a.id) ?? 0)}
           </option>
         ))}
       </select>
     </label>
+  );
+  async function setSettlementAccount(settlementId: string, accountId: string) {
+    if (!accountId) return;
+    await rpc(
+      supabase.rpc("set_settlement_account", {
+        _settlement_id: settlementId,
+        _account_id: accountId,
+      }),
+      "Conta da movimentação atualizada.",
+    );
+  }
+  // Conta da movimentação já lançada: editável para acertar o saldo das contas.
+  const accountTag = (settlementId: string, current: string | null) => (
+    <select
+      aria-label="Conta da movimentação"
+      className={cn(
+        "h-7 max-w-44 rounded border bg-background px-1 text-xs",
+        !current && "border-alert bg-alert-soft font-medium text-alert",
+      )}
+      value={current ?? ""}
+      onChange={(ev) => void setSettlementAccount(settlementId, ev.target.value)}
+    >
+      {!current && <option value="">Sem conta · escolher</option>}
+      {current && !activeAccounts.some((a) => a.id === current) && (
+        <option value={current}>Conta: {accountName(current)} (inativa)</option>
+      )}
+      {activeAccounts.map((a) => (
+        <option key={a.id} value={a.id}>
+          Conta: {a.name}
+        </option>
+      ))}
+    </select>
   );
   const methodSelect = (defaultValue = "") => (
     <label className="block text-sm">
@@ -488,16 +571,6 @@ export function Finance({ workId }: { workId?: string }) {
         <h2 className={workId ? "text-lg font-semibold" : "sr-only"}>
           Financeiro{workId ? " da obra" : ""}
         </h2>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" onClick={() => open("account")}>
-            <Wallet className="h-4 w-4" />
-            Conta bancária
-          </Button>
-          <Button variant="outline" onClick={() => open("transfer")}>
-            <ArrowLeftRight className="h-4 w-4" />
-            Transferência
-          </Button>
-        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 xl:grid-cols-5">
@@ -533,28 +606,21 @@ export function Finance({ workId }: { workId?: string }) {
           hint="Atual + a receber − a pagar"
         />
       </div>
-      {!workId && (
-        <div className="flex gap-3 overflow-x-auto pb-1 [scrollbar-width:none] sm:flex-wrap [&::-webkit-scrollbar]:hidden">
-          {data &&
-            accountBalances(data.accounts, data.entries, data.settlements, data.transfers).map(
-              (a) => (
-                <div
-                  key={a.id}
-                  className="flex shrink-0 items-center gap-3 rounded-xl border border-border/70 bg-card px-3.5 py-2.5"
-                >
-                  <IconBubble icon={Landmark} tone="neutral" className="h-8 w-8 rounded-lg" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">
-                      {data.accounts.find((x) => x.id === a.id)?.name}
-                    </p>
-                    <p className="text-sm font-semibold">
-                      <Money value={a.balance} tone="auto" />
-                    </p>
-                  </div>
-                </div>
-              ),
-            )}
-        </div>
+      {!workId && data && (
+        <CompanyAccounts
+          accounts={data.accounts}
+          balances={balances}
+          unassigned={unassigned}
+          onTransfer={() => open("transfer")}
+          onShowUnassigned={() => {
+            setTab("caixa");
+            setPeriod("todos");
+            setType("");
+            setCategory("");
+            setAccountFilter("sem");
+          }}
+          onChanged={refresh}
+        />
       )}
       {opening && (
         <p className="text-xs text-muted-foreground">
@@ -687,6 +753,25 @@ export function Finance({ workId }: { workId?: string }) {
             ))}
           </select>
         </label>
+        {tab === "caixa" && (
+          <label className="text-xs">
+            Conta
+            <select
+              className={selectClass}
+              value={accountFilter}
+              onChange={(e) => setAccountFilter(e.target.value)}
+            >
+              <option value="">Todas as contas</option>
+              {data?.accounts.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.name}
+                  {a.active ? "" : " (inativa)"}
+                </option>
+              ))}
+              <option value="sem">Sem conta</option>
+            </select>
+          </label>
+        )}
         {tab === "caixa" ? (
           <label className="text-xs">
             Tipo
@@ -737,8 +822,6 @@ export function Finance({ workId }: { workId?: string }) {
                 <p className="mt-0.5 text-xs text-muted-foreground">
                   {fmtDate(m.date)} · {m.direction === "entrada" ? "Entrada" : "Saída"} ·{" "}
                   {m.category} · {m.payment_method || "Forma não informada"}
-                  {m.account_id &&
-                    ` · ${data?.accounts.find((a) => a.id === m.account_id)?.name ?? "Conta"}`}
                   {!workId &&
                     ` · ${data?.works.find((w) => w.id === m.work_id)?.name || "Geral JMG"}`}
                 </p>
@@ -766,11 +849,14 @@ export function Finance({ workId }: { workId?: string }) {
                   )}
                   {m.notes ? ` · ${m.notes}` : ""}
                 </p>
-                {stageTag(
-                  m.entry_id,
-                  data?.entries.find((x) => x.id === m.entry_id)?.stage_id ?? null,
-                  m.direction,
-                )}
+                <div className="mt-1 flex flex-wrap items-center gap-2">
+                  {accountTag(m.id, m.account_id)}
+                  {stageTag(
+                    m.entry_id,
+                    data?.entries.find((x) => x.id === m.entry_id)?.stage_id ?? null,
+                    m.direction,
+                  )}
+                </div>
                 <div className="-ml-3 mt-1 flex flex-wrap items-center gap-1">
                   <Attachment path={m.file_path} />
                   {m.direction === "entrada" && <ReceiptButton id={m.id} />}
@@ -936,8 +1022,7 @@ export function Finance({ workId }: { workId?: string }) {
                   >
                     {e.direction === "entrada" ? "Recebido" : "Pago"} em {fmtDate(s.paid_date)} ·{" "}
                     {brl(s.amount)} · {s.payment_method || "Forma não informada"}
-                    {s.account_id &&
-                      ` · ${data?.accounts.find((a) => a.id === s.account_id)?.name ?? "Conta"}`}
+                    {accountTag(s.id, s.account_id)}
                     <Attachment path={s.file_path} />
                     {e.direction === "entrada" && <ReceiptButton id={s.id} small />}
                     <button
@@ -977,7 +1062,6 @@ export function Finance({ workId }: { workId?: string }) {
             <DialogTitle>
               {
                 {
-                  account: "Nova conta bancária",
                   cash:
                     entryDirection === "entrada" ? "Nova entrada no caixa" : "Nova saída do caixa",
                   entry:
@@ -998,12 +1082,6 @@ export function Finance({ workId }: { workId?: string }) {
               save(new FormData(e.currentTarget));
             }}
           >
-            {dialog === "account" && (
-              <>
-                <Field name="name" label="Nome da conta / caixa" required />
-                <Field name="opening" label="Saldo inicial (R$)" type="number" />
-              </>
-            )}
             {dialog === "cash" && (
               <>
                 <p className="text-xs text-muted-foreground">
@@ -1024,7 +1102,12 @@ export function Finance({ workId }: { workId?: string }) {
                   {categorySelect}
                   {methodSelect("Pix")}
                 </div>
-                {accountSelect("account", "Conta / banco", true)}
+                {accountPicker(
+                  "account",
+                  entryDirection === "entrada"
+                    ? "Em qual conta o dinheiro entrou?"
+                    : "De qual conta o dinheiro saiu?",
+                )}
                 {personSelect(
                   entryDirection === "entrada"
                     ? "Cliente (opcional)"
@@ -1103,15 +1186,23 @@ export function Finance({ workId }: { workId?: string }) {
                   Valor menor deixa a conta parcial, com o restante em aberto.
                 </p>
                 {methodSelect(entry.payment_method || "Pix")}
-                {accountSelect("account", "Conta / banco", true)}
+                {accountPicker(
+                  "account",
+                  entry.direction === "entrada"
+                    ? "Em qual conta o dinheiro entrou?"
+                    : "De qual conta o dinheiro saiu?",
+                )}
                 <Field name="notes" label="Observação" />
                 <Field name="proof" label="Comprovante" type="file" />
               </>
             )}
             {dialog === "transfer" && (
               <>
-                {accountSelect("from", "Conta de origem")}
-                {accountSelect("to", "Conta de destino")}
+                <p className="text-xs text-muted-foreground">
+                  Não conta como receita nem despesa, só move o saldo entre as contas.
+                </p>
+                {transferSelect("from", "Sai de")}
+                {transferSelect("to", "Entra em")}
                 <Field name="amount" label="Valor (R$)" type="number" required />
                 <Field name="date" label="Data" type="date" value={today} required />
                 <Field name="description" label="Descrição" />

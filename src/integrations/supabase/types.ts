@@ -578,6 +578,8 @@ export type Database = {
       };
       contracts: {
         Row: {
+          bank_account: Json | null;
+          bank_account_id: string | null;
           budget_id: string | null;
           code: string | null;
           generated_at: string | null;
@@ -597,6 +599,8 @@ export type Database = {
           work_id: string;
         };
         Insert: {
+          bank_account?: Json | null;
+          bank_account_id?: string | null;
           budget_id?: string | null;
           code?: string | null;
           generated_at?: string | null;
@@ -616,6 +620,8 @@ export type Database = {
           work_id: string;
         };
         Update: {
+          bank_account?: Json | null;
+          bank_account_id?: string | null;
           budget_id?: string | null;
           code?: string | null;
           generated_at?: string | null;
@@ -718,6 +724,16 @@ export type Database = {
       };
       financial_accounts: {
         Row: {
+          account_number: string | null;
+          agency: string | null;
+          bank: string | null;
+          holder: string | null;
+          holder_document: string | null;
+          is_contract_default: boolean;
+          kind: string;
+          pix_key: string | null;
+          pix_key_type: string | null;
+          updated_at: string;
           active: boolean;
           created_at: string;
           id: string;
@@ -725,6 +741,16 @@ export type Database = {
           opening_balance: number;
         };
         Insert: {
+          account_number?: string | null;
+          agency?: string | null;
+          bank?: string | null;
+          holder?: string | null;
+          holder_document?: string | null;
+          is_contract_default?: boolean;
+          kind?: string;
+          pix_key?: string | null;
+          pix_key_type?: string | null;
+          updated_at?: string;
           active?: boolean;
           created_at?: string;
           id?: string;
@@ -732,6 +758,16 @@ export type Database = {
           opening_balance?: number;
         };
         Update: {
+          account_number?: string | null;
+          agency?: string | null;
+          bank?: string | null;
+          holder?: string | null;
+          holder_document?: string | null;
+          is_contract_default?: boolean;
+          kind?: string;
+          pix_key?: string | null;
+          pix_key_type?: string | null;
+          updated_at?: string;
           active?: boolean;
           created_at?: string;
           id?: string;
@@ -2495,8 +2531,12 @@ export type Database = {
         Returns: undefined;
       };
       register_generated_contract: {
-        Args: { _budget_id: string; _code: string; _path: string };
+        Args: { _account_id?: string; _budget_id: string; _code: string; _path: string };
         Returns: string;
+      };
+      set_settlement_account: {
+        Args: { _account_id: string; _settlement_id: string };
+        Returns: undefined;
       };
       save_standalone_schedule: {
         Args: {
