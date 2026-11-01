@@ -34,7 +34,7 @@ import { MaterialsSummary } from "@/components/budgets/materials-summary";
 import { PricingPanel } from "@/components/budgets/pricing-panel";
 import { ScheduleEditor } from "@/components/budgets/schedule-editor";
 import { ProposalPreviewButton } from "@/components/budgets/proposal-preview";
-import { buildProposal, contractIssues, proposalIssues } from "@/lib/proposal";
+import { buildProposal, contractIssues, proposalIssues, proposalNumber } from "@/lib/proposal";
 import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { BUDGET_STATUS_VARIANT } from "@/lib/status-badges";
@@ -332,7 +332,13 @@ function Editor() {
         />
       </div>
 
-      <BudgetVersions budgetId={id} fingerprint={fingerprint} locked={locked} />
+      <BudgetVersions
+        budgetId={id}
+        fingerprint={fingerprint}
+        locked={locked}
+        code={proposalNumber(budget.number, budget.issue_date)}
+        client={proposal?.client.name ?? budget.client_display}
+      />
 
       <div className="mb-6 flex flex-wrap items-center gap-2">
         {budget.status === "elaboracao" && (

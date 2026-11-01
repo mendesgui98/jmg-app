@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { BadgeCheck, FileDown, History } from "lucide-react";
 import { budgetVersionsOptions, hasUnsavedChanges } from "@/lib/budget-versions";
 import { openDocument } from "@/lib/work-data";
+import { documentFileName } from "@/lib/file-names";
 import { fmtDate } from "@/lib/format";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -16,10 +17,15 @@ export function BudgetVersions({
   budgetId,
   fingerprint,
   locked,
+  code,
+  client,
 }: {
   budgetId: string;
   fingerprint: string;
   locked: boolean;
+  /** Número do orçamento e cliente, para o nome do PDF baixado ("ORC-2026-0042 v2 - Ana.pdf"). */
+  code: string;
+  client: string | null | undefined;
 }) {
   const { data: versions = [] } = useQuery(budgetVersionsOptions(budgetId));
   const { data: names = {} } = useQuery({
@@ -85,7 +91,12 @@ export function BudgetVersions({
                 type="button"
                 size="sm"
                 variant="outline"
-                onClick={() => openDocument(v.file_path).catch((e) => toast.error(e.message))}
+                onClick={() =>
+                  openDocument(
+                    v.file_path,
+                    documentFileName(code, client, { suffix: `v${v.version}` }),
+                  ).catch((e) => toast.error(e.message))
+                }
               >
                 <FileDown className="h-4 w-4" />
                 PDF

@@ -31,9 +31,20 @@ export type PdfService = {
 const footer = (d: ProposalData) =>
   `${d.company.name} · CNPJ ${d.company.cnpj} · ${d.company.phone} · ${d.company.instagram}`;
 
+/**
+ * Página do PDF para ver na tela: o modelo trava a rolagem (`html { overflow: hidden }`, para o
+ * PDF contínuo sair numa página só); na prévia a rolagem volta a funcionar.
+ */
+export function previewHtml(html: string) {
+  const unlock =
+    "<style>html, body { overflow: auto !important; height: auto !important; }</style>";
+  return html.includes("</head>") ? html.replace("</head>", `${unlock}</head>`) : unlock + html;
+}
+
 export function createPdfService(): PdfService {
   return {
-    proposalPreview: (d, layout) => proposalHtml(d, loadAssets(), SCHEDULE_DISCLAIMER, layout),
+    proposalPreview: (d, layout) =>
+      previewHtml(proposalHtml(d, loadAssets(), SCHEDULE_DISCLAIMER, layout)),
     proposal: (d, layout) => {
       const assets = loadAssets();
       const title = `${d.number} · ${d.client.name}`;

@@ -123,7 +123,7 @@ export function Contract({
         /\{\{([^}]+)\}\}/g,
         (match, key) => values[key] || match,
       );
-      return { contract: c.data, generated };
+      return { contract: c.data, generated, client: values["CLIENTE"] ?? "" };
     },
   });
   useEffect(() => {
@@ -196,7 +196,7 @@ export function Contract({
           )}
         </div>
         {data.contract ? (
-          <ContractActions contract={data.contract} />
+          <ContractActions contract={data.contract} client={data.client} />
         ) : (
           <p className="text-sm text-muted-foreground">
             Ao gerar, o contrato entra em Contratos como aguardando assinatura.

@@ -130,7 +130,10 @@ test("gera o PDF do orçamento com os dados do banco", async () => {
   const r = await post(`/v1/orcamentos/${ID}/pdf`);
   assert.equal(r.status, 200);
   assert.equal(r.headers.get("content-type"), "application/pdf");
-  assert.match(r.headers.get("content-disposition") ?? "", /ORC-2026-0007\.pdf/);
+  assert.match(
+    r.headers.get("content-disposition") ?? "",
+    /filename="ORC-2026-0007 - Cliente Teste\.pdf"/,
+  );
   assert.equal(await r.text(), "%PDF-orcamento");
   const d = rendered.at(-1)!;
   assert.equal(d.issueDate, "2026-10-28");
@@ -166,7 +169,10 @@ test("contrato só sai de orçamento aprovado", async () => {
   current = input("aprovado");
   const ok = await post(`/v1/orcamentos/${ID}/contrato`);
   assert.equal(ok.status, 200);
-  assert.match(ok.headers.get("content-disposition") ?? "", /Contrato-ORC-2026-0007/);
+  assert.match(
+    ok.headers.get("content-disposition") ?? "",
+    /filename="CT-2026-0007 - Cliente Teste\.pdf"/,
+  );
   assert.equal(layouts.at(-1), "continuo");
   assert.equal((await post(`/v1/orcamentos/${ID}/contrato?layout=paginado`)).status, 200);
   assert.equal(layouts.at(-1), "paginado");
@@ -210,7 +216,10 @@ test("recibo do recebimento de uma entrada, com os dados opcionais do pagador", 
     body: JSON.stringify({ payer: { bank: "Banco Itaú" }, transactionId: "E123" }),
   });
   assert.equal(r.status, 200);
-  assert.match(r.headers.get("content-disposition") ?? "", /Recibo-REC-2026-0007-01\.pdf/);
+  assert.match(
+    r.headers.get("content-disposition") ?? "",
+    /filename="REC-2026-0007-01 - Cliente\.pdf"/,
+  );
   const d = receipts.at(-1)!;
   assert.equal(d.transactionId, "E123");
   assert.deepEqual(
@@ -257,4 +266,12 @@ test("prévia do orçamento: página do PDF na tela, mesmo com pendências", asy
   assert.match(body.issues.join(" "), /90%/);
   assert.equal((await post(`/v1/orcamentos/${ID}/previa`, "eq")).status, 403);
   current = input("elaboracao");
+});
+
+test("prévia do orçamento libera a rolagem que o modelo do PDF trava", async () => {
+  const { previewHtml } = await import("../src/pdf/index.ts");
+  const html = previewHtml(
+    "<html><head><style>html { overflow: hidden; }</style></head><body>x</body></html>",
+  );
+  assert.match(html, /overflow: auto !important[^<]*<\/style><\/head>/);
 });
