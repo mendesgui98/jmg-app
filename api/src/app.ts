@@ -12,6 +12,7 @@ import {
   proposalIssues,
 } from "../../src/lib/proposal.ts";
 import { buildReceipt } from "../../src/lib/receipt.ts";
+import { documentFileName } from "../../src/lib/file-names.ts";
 import { COMPANY_ACCOUNT, hasBankData } from "../../src/lib/bank-accounts.ts";
 
 export type Deps = {
@@ -163,7 +164,7 @@ export function createApp(deps: Deps) {
       if (issues.length) throw new HttpError(422, "incomplete", issues.join(" "));
       const file = await pdf.proposal(data, pdfLayout(req.query.get("layout")));
       log({ event: "proposal_pdf", by: s.claims.sub, budget: req.params["id"] });
-      return pdfReply(file, `${data.number}.pdf`);
+      return pdfReply(file, documentFileName(data.number, data.client.name));
     })
     // Prévia do orçamento na tela (mesmo modelo do PDF); mostra também o que falta para o PDF.
     .add("POST", "/v1/orcamentos/:id/previa", async (req) => {
@@ -204,7 +205,10 @@ export function createApp(deps: Deps) {
         bank,
       );
       log({ event: "contract_pdf", by: s.claims.sub, budget: req.params["id"] });
-      return pdfReply(file, `Contrato-${data.number}.pdf`);
+      return pdfReply(
+        file,
+        documentFileName(data.number.replace(/^ORC-/, "CT-"), data.client.name),
+      );
     })
     .add("POST", "/v1/recebimentos/:id/recibo", async (req) => {
       const s = await session(req);
@@ -222,7 +226,7 @@ export function createApp(deps: Deps) {
       const data = buildReceipt({ ...input, ...extra, today: today() });
       const file = await deps.pdf.receipt(data);
       log({ event: "receipt_pdf", by: s.claims.sub, settlement: id });
-      return pdfReply(file, `Recibo-${data.number}.pdf`);
+      return pdfReply(file, documentFileName(data.number, data.client.name));
     })
     .add("GET", "/v1/admin/export", async (req) => {
       const s = await admin(req);

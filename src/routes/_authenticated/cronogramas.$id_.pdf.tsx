@@ -7,6 +7,8 @@ import { pageMeta } from "@/lib/page-meta";
 import { snapshotStages } from "@/lib/work-schedule";
 import { Button } from "@/components/ui/button";
 import { ScaledSheets } from "@/components/works/schedule-sheets";
+import { useDocumentTitle } from "@/hooks/use-document-title";
+import { documentFileName } from "@/lib/file-names";
 export const Route = createFileRoute("/_authenticated/cronogramas/$id_/pdf")({
   validateSearch: (s: Record<string, unknown>): { version?: number | undefined } => ({
     version: typeof s["version"] === "number" ? s["version"] : undefined,
@@ -24,6 +26,9 @@ function Document() {
   const { version } = Route.useSearch();
   const { data } = useSuspenseQuery(scheduleOptions(id));
   const h = data.header;
+  useDocumentTitle(
+    documentFileName(h.name, h.client_name, { prefix: "Cronograma" }).replace(/\.pdf$/, ""),
+  );
   if (h.deleted_at) return <DeletedRecordNotice entity="schedules" id={id} name={h.name} />;
   const saved = data.versions.find((v) => v.version === version);
   const stages = saved ? snapshotStages(saved.stages) : data.stages;

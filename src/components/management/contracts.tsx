@@ -159,7 +159,15 @@ export function ContractList() {
                     : `gerado em ${fmtDate(c.generated_at || c.created_at)}`}
                 </p>
                 <div className="mt-2 flex flex-wrap items-center gap-1">
-                  <ContractActions contract={c} badge={false} />
+                  <ContractActions
+                    contract={c}
+                    badge={false}
+                    client={
+                      data?.people.find(
+                        (p) => p.id === data.works.find((x) => x.id === c.work_id)?.client_id,
+                      )?.name
+                    }
+                  />
                   <Button variant="ghost" size="sm" asChild>
                     <Link to="/obras/$id" params={{ id: c.work_id }} search={{ tab: "financeiro" }}>
                       <Wallet className="h-4 w-4" />

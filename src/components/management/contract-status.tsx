@@ -5,7 +5,8 @@ import { FileCheck, FileDown, Upload } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import { useMe } from "@/hooks/use-me";
-import { openDocument, uploadDocument } from "@/lib/work-data";
+import { fileExtension, openDocument, uploadDocument } from "@/lib/work-data";
+import { documentFileName } from "@/lib/file-names";
 import { fmtDate } from "@/lib/format";
 import { text } from "@/lib/form-values";
 import { CONTRACT_STATUS } from "@/lib/status-badges";
@@ -29,8 +30,11 @@ export function ContractStatusBadge({ status }: { status: string }) {
 export function ContractActions({
   contract,
   badge = true,
+  client,
 }: {
   contract: ContractRow;
+  /** Cliente da obra, para o nome do arquivo baixado ("CT-2026-0042 - Mariana Ribeiro.pdf"). */
+  client?: string | null | undefined;
   /** false quando a situação já aparece ao lado do título. */
   badge?: boolean;
 }) {
@@ -73,7 +77,14 @@ export function ContractActions({
       setBusy(false);
     }
   }
-  const open = (path: string) => openDocument(path).catch((e) => toast.error(e.message));
+  const open = (path: string, suffix?: string) =>
+    openDocument(
+      path,
+      documentFileName(contract.code || "Contrato", client, suffix ? { suffix } : {}).replace(
+        /\.pdf$/,
+        fileExtension(path),
+      ),
+    ).catch((e) => toast.error(e.message));
   return (
     <div className="flex flex-wrap items-center gap-2">
       {me?.isAdmin && !signed ? (
@@ -105,7 +116,12 @@ export function ContractActions({
         </Button>
       )}
       {contract.signed_path && (
-        <Button type="button" size="sm" variant="ghost" onClick={() => open(contract.signed_path!)}>
+        <Button
+          type="button"
+          size="sm"
+          variant="ghost"
+          onClick={() => open(contract.signed_path!, "assinado")}
+        >
           <FileCheck className="h-4 w-4" />
           Contrato assinado{contract.signed_date ? ` · ${fmtDate(contract.signed_date)}` : ""}
         </Button>

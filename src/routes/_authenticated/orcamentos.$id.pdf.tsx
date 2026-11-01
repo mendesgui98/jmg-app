@@ -103,7 +103,7 @@ function Pdf() {
           .from("jmg-documents")
           .upload(path, data.blob, { contentType: "application/pdf" });
         if (up.error) throw up.error;
-        const code = /ORC-(\d{4}-\d+)/.exec(data.name)?.[1];
+        const code = /(?:ORC|CT)-(\d{4}-\d+)/.exec(data.name)?.[1];
         const base = { _budget_id: id, _path: path, _code: code ? `CT-${code}` : "" };
         let r = await supabase.rpc(
           "register_generated_contract",

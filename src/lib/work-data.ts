@@ -64,11 +64,18 @@ export async function uploadDocument(original: File, folder: string) {
   if (r.error) throw r.error;
   return path;
 }
-export async function openDocument(path: string) {
-  const r = await supabase.storage.from("jmg-documents").createSignedUrl(path, 300);
+/** Abre um documento do bucket privado; com `fileName`, baixa já com esse nome. */
+export async function openDocument(path: string, fileName?: string) {
+  const r = await supabase.storage
+    .from("jmg-documents")
+    .createSignedUrl(path, 300, fileName ? { download: fileName } : undefined);
   if (r.error) throw r.error;
   window.open(r.data.signedUrl, "_blank", "noopener,noreferrer");
 }
+
+/** Extensão do arquivo guardado (".pdf", ".jpg"…), para o nome do download. */
+export const fileExtension = (path: string) =>
+  /\.[a-z0-9]+$/i.exec(path)?.[0].toLowerCase() ?? ".pdf";
 /** Nome do cliente da obra para as impressões (cadastro, ou o nome do orçamento). */
 export const workClientOptions = (id: string) =>
   queryOptions({
