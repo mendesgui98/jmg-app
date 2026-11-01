@@ -230,3 +230,19 @@ test("recibo: equipe não gera e recebimento desconhecido devolve 404", async ()
     404,
   );
 });
+
+test("contrato tem só as assinaturas do contratante e da contratada, sem testemunhas", async () => {
+  const { contractHtml } = await import("../src/pdf/contract-html.ts");
+  const { buildProposal } = await import("../../src/lib/proposal.ts");
+  const data = buildProposal({ ...input("aprovado"), today: "2026-11-01" });
+  const html = contractHtml(
+    data,
+    { css: "", logoBlue: new Uint8Array(), logoWhite: "", logoBlueUri: "" },
+    "2026-11-01",
+    [{ title: "Objetivo", body: "{{N}}.1. Reforma." }],
+  );
+  assert.doesNotMatch(html, /testemunha/i);
+  assert.match(html, /CONTRATANTE/);
+  assert.match(html, /CONTRATADA/);
+  assert.equal(html.match(/<div class="signs">/g)?.length, 1);
+});
