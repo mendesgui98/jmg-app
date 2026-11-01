@@ -21,12 +21,15 @@ import { Route as AuthenticatedEtapasRouteImport } from './routes/_authenticated
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedMateriaisRouteImport } from './routes/_authenticated/materiais'
 import { Route as AuthenticatedPainelRouteImport } from './routes/_authenticated/painel'
+import { Route as AuthenticatedPendenciasRouteImport } from './routes/_authenticated/pendencias'
 import { Route as AuthenticatedServicosRouteImport } from './routes/_authenticated/servicos'
 import { Route as AuthenticatedCadastrosIdRouteImport } from './routes/_authenticated/cadastros_.$id'
 import { Route as AuthenticatedCronogramasIndexRouteImport } from './routes/_authenticated/cronogramas.index'
 import { Route as AuthenticatedCronogramasIdRouteImport } from './routes/_authenticated/cronogramas.$id'
 import { Route as AuthenticatedObrasIndexRouteImport } from './routes/_authenticated/obras.index'
 import { Route as AuthenticatedOrcamentosIndexRouteImport } from './routes/_authenticated/orcamentos.index'
+import { Route as AuthenticatedPlanejamentoIndexRouteImport } from './routes/_authenticated/planejamento.index'
+import { Route as AuthenticatedPlanejamentoPdfRouteImport } from './routes/_authenticated/planejamento.pdf'
 import { Route as AuthenticatedRecibosIdRouteImport } from './routes/_authenticated/recibos.$id'
 import { Route as AuthenticatedCronogramasIdPdfRouteImport } from './routes/_authenticated/cronogramas.$id_.pdf'
 import { Route as AuthenticatedObrasIdIndexRouteImport } from './routes/_authenticated/obras.$id.index'
@@ -97,6 +100,11 @@ const AuthenticatedPainelRoute = AuthenticatedPainelRouteImport.update({
   path: '/painel',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const AuthenticatedPendenciasRoute = AuthenticatedPendenciasRouteImport.update({
+  id: '/pendencias',
+  path: '/pendencias',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
 const AuthenticatedServicosRoute = AuthenticatedServicosRouteImport.update({
   id: '/servicos',
   path: '/servicos',
@@ -129,6 +137,18 @@ const AuthenticatedOrcamentosIndexRoute =
   AuthenticatedOrcamentosIndexRouteImport.update({
     id: '/orcamentos/',
     path: '/orcamentos/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlanejamentoIndexRoute =
+  AuthenticatedPlanejamentoIndexRouteImport.update({
+    id: '/planejamento/',
+    path: '/planejamento/',
+    getParentRoute: () => AuthenticatedRouteRoute,
+  } as any)
+const AuthenticatedPlanejamentoPdfRoute =
+  AuthenticatedPlanejamentoPdfRouteImport.update({
+    id: '/planejamento/pdf',
+    path: '/planejamento/pdf',
     getParentRoute: () => AuthenticatedRouteRoute,
   } as any)
 const AuthenticatedRecibosIdRoute = AuthenticatedRecibosIdRouteImport.update({
@@ -197,13 +217,16 @@ export interface FileRoutesByFullPath {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/pendencias': typeof AuthenticatedPendenciasRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/cadastros/$id': typeof AuthenticatedCadastrosIdRoute
   '/cronogramas/$id': typeof AuthenticatedCronogramasIdRoute
+  '/planejamento/pdf': typeof AuthenticatedPlanejamentoPdfRoute
   '/recibos/$id': typeof AuthenticatedRecibosIdRoute
   '/cronogramas/': typeof AuthenticatedCronogramasIndexRoute
   '/obras/': typeof AuthenticatedObrasIndexRoute
   '/orcamentos/': typeof AuthenticatedOrcamentosIndexRoute
+  '/planejamento/': typeof AuthenticatedPlanejamentoIndexRoute
   '/cronogramas/$id/pdf': typeof AuthenticatedCronogramasIdPdfRoute
   '/orcamentos/$id/pdf': typeof AuthenticatedOrcamentosIdPdfRoute
   '/obras/$id/': typeof AuthenticatedObrasIdIndexRoute
@@ -225,13 +248,16 @@ export interface FileRoutesByTo {
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
   '/painel': typeof AuthenticatedPainelRoute
+  '/pendencias': typeof AuthenticatedPendenciasRoute
   '/servicos': typeof AuthenticatedServicosRoute
   '/cadastros/$id': typeof AuthenticatedCadastrosIdRoute
   '/cronogramas/$id': typeof AuthenticatedCronogramasIdRoute
+  '/planejamento/pdf': typeof AuthenticatedPlanejamentoPdfRoute
   '/recibos/$id': typeof AuthenticatedRecibosIdRoute
   '/cronogramas': typeof AuthenticatedCronogramasIndexRoute
   '/obras': typeof AuthenticatedObrasIndexRoute
   '/orcamentos': typeof AuthenticatedOrcamentosIndexRoute
+  '/planejamento': typeof AuthenticatedPlanejamentoIndexRoute
   '/cronogramas/$id/pdf': typeof AuthenticatedCronogramasIdPdfRoute
   '/orcamentos/$id/pdf': typeof AuthenticatedOrcamentosIdPdfRoute
   '/obras/$id': typeof AuthenticatedObrasIdIndexRoute
@@ -255,13 +281,16 @@ export interface FileRoutesById {
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/materiais': typeof AuthenticatedMateriaisRoute
   '/_authenticated/painel': typeof AuthenticatedPainelRoute
+  '/_authenticated/pendencias': typeof AuthenticatedPendenciasRoute
   '/_authenticated/servicos': typeof AuthenticatedServicosRoute
   '/_authenticated/cadastros_/$id': typeof AuthenticatedCadastrosIdRoute
   '/_authenticated/cronogramas/$id': typeof AuthenticatedCronogramasIdRoute
+  '/_authenticated/planejamento/pdf': typeof AuthenticatedPlanejamentoPdfRoute
   '/_authenticated/recibos/$id': typeof AuthenticatedRecibosIdRoute
   '/_authenticated/cronogramas/': typeof AuthenticatedCronogramasIndexRoute
   '/_authenticated/obras/': typeof AuthenticatedObrasIndexRoute
   '/_authenticated/orcamentos/': typeof AuthenticatedOrcamentosIndexRoute
+  '/_authenticated/planejamento/': typeof AuthenticatedPlanejamentoIndexRoute
   '/_authenticated/cronogramas/$id_/pdf': typeof AuthenticatedCronogramasIdPdfRoute
   '/_authenticated/orcamentos/$id/pdf': typeof AuthenticatedOrcamentosIdPdfRoute
   '/_authenticated/obras/$id/': typeof AuthenticatedObrasIdIndexRoute
@@ -285,13 +314,16 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/materiais'
     | '/painel'
+    | '/pendencias'
     | '/servicos'
     | '/cadastros/$id'
     | '/cronogramas/$id'
+    | '/planejamento/pdf'
     | '/recibos/$id'
     | '/cronogramas/'
     | '/obras/'
     | '/orcamentos/'
+    | '/planejamento/'
     | '/cronogramas/$id/pdf'
     | '/orcamentos/$id/pdf'
     | '/obras/$id/'
@@ -313,13 +345,16 @@ export interface FileRouteTypes {
     | '/financeiro'
     | '/materiais'
     | '/painel'
+    | '/pendencias'
     | '/servicos'
     | '/cadastros/$id'
     | '/cronogramas/$id'
+    | '/planejamento/pdf'
     | '/recibos/$id'
     | '/cronogramas'
     | '/obras'
     | '/orcamentos'
+    | '/planejamento'
     | '/cronogramas/$id/pdf'
     | '/orcamentos/$id/pdf'
     | '/obras/$id'
@@ -342,13 +377,16 @@ export interface FileRouteTypes {
     | '/_authenticated/financeiro'
     | '/_authenticated/materiais'
     | '/_authenticated/painel'
+    | '/_authenticated/pendencias'
     | '/_authenticated/servicos'
     | '/_authenticated/cadastros_/$id'
     | '/_authenticated/cronogramas/$id'
+    | '/_authenticated/planejamento/pdf'
     | '/_authenticated/recibos/$id'
     | '/_authenticated/cronogramas/'
     | '/_authenticated/obras/'
     | '/_authenticated/orcamentos/'
+    | '/_authenticated/planejamento/'
     | '/_authenticated/cronogramas/$id_/pdf'
     | '/_authenticated/orcamentos/$id/pdf'
     | '/_authenticated/obras/$id/'
@@ -452,6 +490,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedPainelRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/_authenticated/pendencias': {
+      id: '/_authenticated/pendencias'
+      path: '/pendencias'
+      fullPath: '/pendencias'
+      preLoaderRoute: typeof AuthenticatedPendenciasRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
     '/_authenticated/servicos': {
       id: '/_authenticated/servicos'
       path: '/servicos'
@@ -492,6 +537,20 @@ declare module '@tanstack/react-router' {
       path: '/orcamentos'
       fullPath: '/orcamentos/'
       preLoaderRoute: typeof AuthenticatedOrcamentosIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/planejamento/': {
+      id: '/_authenticated/planejamento/'
+      path: '/planejamento'
+      fullPath: '/planejamento/'
+      preLoaderRoute: typeof AuthenticatedPlanejamentoIndexRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/planejamento/pdf': {
+      id: '/_authenticated/planejamento/pdf'
+      path: '/planejamento/pdf'
+      fullPath: '/planejamento/pdf'
+      preLoaderRoute: typeof AuthenticatedPlanejamentoPdfRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/recibos/$id': {
@@ -569,13 +628,16 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMateriaisRoute: typeof AuthenticatedMateriaisRoute
   AuthenticatedPainelRoute: typeof AuthenticatedPainelRoute
+  AuthenticatedPendenciasRoute: typeof AuthenticatedPendenciasRoute
   AuthenticatedServicosRoute: typeof AuthenticatedServicosRoute
   AuthenticatedCadastrosIdRoute: typeof AuthenticatedCadastrosIdRoute
   AuthenticatedCronogramasIdRoute: typeof AuthenticatedCronogramasIdRoute
+  AuthenticatedPlanejamentoPdfRoute: typeof AuthenticatedPlanejamentoPdfRoute
   AuthenticatedRecibosIdRoute: typeof AuthenticatedRecibosIdRoute
   AuthenticatedCronogramasIndexRoute: typeof AuthenticatedCronogramasIndexRoute
   AuthenticatedObrasIndexRoute: typeof AuthenticatedObrasIndexRoute
   AuthenticatedOrcamentosIndexRoute: typeof AuthenticatedOrcamentosIndexRoute
+  AuthenticatedPlanejamentoIndexRoute: typeof AuthenticatedPlanejamentoIndexRoute
   AuthenticatedCronogramasIdPdfRoute: typeof AuthenticatedCronogramasIdPdfRoute
   AuthenticatedOrcamentosIdPdfRoute: typeof AuthenticatedOrcamentosIdPdfRoute
   AuthenticatedObrasIdIndexRoute: typeof AuthenticatedObrasIdIndexRoute
@@ -595,13 +657,16 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMateriaisRoute: AuthenticatedMateriaisRoute,
   AuthenticatedPainelRoute: AuthenticatedPainelRoute,
+  AuthenticatedPendenciasRoute: AuthenticatedPendenciasRoute,
   AuthenticatedServicosRoute: AuthenticatedServicosRoute,
   AuthenticatedCadastrosIdRoute: AuthenticatedCadastrosIdRoute,
   AuthenticatedCronogramasIdRoute: AuthenticatedCronogramasIdRoute,
+  AuthenticatedPlanejamentoPdfRoute: AuthenticatedPlanejamentoPdfRoute,
   AuthenticatedRecibosIdRoute: AuthenticatedRecibosIdRoute,
   AuthenticatedCronogramasIndexRoute: AuthenticatedCronogramasIndexRoute,
   AuthenticatedObrasIndexRoute: AuthenticatedObrasIndexRoute,
   AuthenticatedOrcamentosIndexRoute: AuthenticatedOrcamentosIndexRoute,
+  AuthenticatedPlanejamentoIndexRoute: AuthenticatedPlanejamentoIndexRoute,
   AuthenticatedCronogramasIdPdfRoute: AuthenticatedCronogramasIdPdfRoute,
   AuthenticatedOrcamentosIdPdfRoute: AuthenticatedOrcamentosIdPdfRoute,
   AuthenticatedObrasIdIndexRoute: AuthenticatedObrasIdIndexRoute,
