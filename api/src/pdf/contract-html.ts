@@ -88,12 +88,10 @@ const css = `
 .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 15mm; margin-top: 22mm; }
 .signs div { border-top: 1px solid ${NAVY}; padding-top: 2.4mm; font-size: 7.6pt; color: #5B6472; line-height: 1.45; }
 .signs b { display: block; color: #16233F; font-size: 9.6pt; }
-.witness { margin-top: 15mm; }
-.witness .signs { margin-top: 18mm; }
 /* Paginado: só as partes começam folha nova; cláusulas seguem uma após a outra. */
 .paged .sec.clause, .paged .sec.closing { break-before: auto; margin-top: 10mm; }
 .paged .clause-head { break-after: avoid; }
-.paged .sign-block, .paged .cl, .paged .pay, .paged .pay-total, .paged .annex, .paged .facts-bar, .paged .witness { break-inside: avoid; }
+.paged .sign-block, .paged .cl, .paged .pay, .paged .pay-total, .paged .annex, .paged .facts-bar { break-inside: avoid; }
 `;
 
 /** "Reforma completa" → "reforma completa", sem mexer em siglas ("JMG"). */
@@ -197,14 +195,12 @@ ${d.stages.map((s) => `<tr><td><span class="badge dot" style="background:${stage
   <div><i>Anexo 3</i><span>Termo de Conclusão de Obra</span></div></div>`;
   const lastClause = clausesHtml.pop();
   const closing = `<section class="sec closing">
-  <p>E, por estarem justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma, na presença das testemunhas abaixo.</p>
+  <p>E, por estarem justas e contratadas, as partes assinam o presente instrumento em 2 (duas) vias de igual teor e forma.</p>
   <div class="sign-block"><p><b>${esc(d.site.city || "São Paulo")}, ${dataPorExtenso(today)}.</b></p>
   <div class="signs">
     <div><b>${esc(client.name)}</b>CONTRATANTE${clientDoc ? ` · ${esc(clientDoc)}` : ""}</div>
     <div><b>${esc(c.name.toUpperCase())}</b>CONTRATADA · CNPJ ${esc(c.cnpj)}<br>${esc(d.responsible)} · Sócio-administrador</div>
   </div></div>
-  <div class="witness">${eyebrow("Testemunhas", true)}
-    <div class="signs"><div><b>Nome:</b>CPF:</div><div><b>Nome:</b>CPF:</div></div></div>
 </section>`;
   const sections = [
     parties,
