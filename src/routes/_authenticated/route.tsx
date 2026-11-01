@@ -10,6 +10,8 @@ import { Clock } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { isDeadSessionError } from "@/integrations/supabase/session-recovery";
 import { useMe } from "@/hooks/use-me";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { OfflineStatus } from "@/components/pwa/offline-status";
 import { useMfa } from "@/hooks/use-mfa";
@@ -36,6 +38,7 @@ function Shell() {
   const qc = useQueryClient();
   const navigate = useNavigate();
   const mfa = useMfa(!!me);
+  const [collapsed] = useSidebarCollapsed();
 
   async function signOut() {
     await qc.cancelQueries();
@@ -67,7 +70,13 @@ function Shell() {
       <AppSidebar onSignOut={signOut} />
       <div className="flex min-w-0 flex-1 flex-col">
         <MobileTopBar onSignOut={signOut} />
-        <main className="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-5 pb-28 md:px-8 md:pt-8 lg:pb-10">
+        <main
+          className={cn(
+            "mx-auto w-full flex-1 px-4 pt-5 pb-28 md:px-8 md:pt-8 lg:pb-10",
+            // Menu recolhido: o conteúdo ocupa a tela inteira no computador.
+            collapsed ? "max-w-[1400px] lg:max-w-none" : "max-w-[1400px]",
+          )}
+        >
           <OfflineStatus />
           <Outlet />
         </main>
