@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
-import { Landmark, Star, Wallet } from "lucide-react";
+import { Star } from "lucide-react";
 import { contractAccountsOptions } from "@/lib/finance-data";
 import {
   accountLine,
@@ -20,7 +20,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { SubmitForm } from "@/components/enter-submit";
-import { IconBubble } from "@/components/kpi";
+import { BankLogo } from "@/components/finance/bank-logo";
 import { cn } from "@/lib/utils";
 
 /**
@@ -134,11 +134,7 @@ function PickerForm({
                 onChange={() => setSelected(a.id)}
                 className="accent-primary"
               />
-              <IconBubble
-                icon={a.kind === "caixa" ? Wallet : Landmark}
-                tone={a.kind === "caixa" ? "positive" : "brand"}
-                className="h-9 w-9 rounded-lg"
-              />
+              <BankLogo account={a} className="h-9 w-9 rounded-lg" />
               <span className="min-w-0">
                 <span className="block font-semibold leading-tight">{a.name}</span>
                 <span className="block truncate text-xs text-muted-foreground tabular-nums">

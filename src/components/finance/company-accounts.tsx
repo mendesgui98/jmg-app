@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeftRight, Landmark, Pencil, Plus, Power, Star, Wallet } from "lucide-react";
+import { ArrowLeftRight, Pencil, Plus, Power, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -21,7 +21,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SubmitForm } from "@/components/enter-submit";
-import { IconBubble, Money } from "@/components/kpi";
+import { Money } from "@/components/kpi";
+import { BankLogo } from "@/components/finance/bank-logo";
+import { BANK_BRANDS, findBank } from "@/lib/bank-logos";
 import { selectClass } from "@/components/works/fields";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -193,11 +195,7 @@ function AccountCard({
       )}
     >
       <div className="flex items-center gap-3">
-        <IconBubble
-          icon={a.kind === "caixa" ? Wallet : Landmark}
-          tone={a.kind === "caixa" ? "positive" : "brand"}
-          className="h-9 w-9 rounded-lg"
-        />
+        <BankLogo account={a} className="h-9 w-9 rounded-lg" />
         <div className="min-w-0">
           <h3 className="truncate font-semibold leading-tight">{a.name}</h3>
           <p className="truncate text-xs text-muted-foreground">
@@ -418,11 +416,24 @@ function AccountForm({
       </div>
       {!cash && (
         <>
-          <p className="border-t pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Dados bancários
-          </p>
+          <div className="flex items-center justify-between gap-3 border-t pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Dados bancários
+            </p>
+            {f.bank.trim() && (
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BankLogo account={{ bank: f.bank, kind: f.kind }} className="h-7 w-7 rounded-lg" />
+                {findBank(f.bank)?.label ?? "Logo não encontrada"}
+              </span>
+            )}
+          </div>
           <div className="grid gap-3 sm:grid-cols-[1.4fr_0.8fr_1fr]">
-            {text("bank", "Banco", { placeholder: "Ex.: Banco C6" })}
+            {text("bank", "Banco", { placeholder: "Ex.: Banco C6", list: "bank-brands" })}
+            <datalist id="bank-brands">
+              {BANK_BRANDS.map((b) => (
+                <option key={b.slug} value={b.label} />
+              ))}
+            </datalist>
             {text("agency", "Agência", { inputMode: "numeric", placeholder: "0001" })}
             {text("account_number", "Conta", {
               inputMode: "numeric",
