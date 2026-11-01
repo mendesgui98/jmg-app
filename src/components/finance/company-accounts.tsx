@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { toast } from "sonner";
-import { ArrowLeftRight, Landmark, Pencil, Plus, Power, Star, Wallet } from "lucide-react";
+import { ArrowLeftRight, Pencil, Plus, Power, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
 import {
@@ -12,7 +12,8 @@ import {
   pixLine,
   type AccountKind,
 } from "@/lib/bank-accounts";
-import { formatCpfCnpj } from "@/lib/documents";
+import { formatAgency, formatBankAccount, formatCpfCnpj, formatPixKey } from "@/lib/documents";
+import { maskBRL, moneyText, parseBRL } from "@/lib/money";
 import { capitalizeWordsProps } from "@/lib/text-case";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -20,7 +21,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { SubmitForm } from "@/components/enter-submit";
-import { IconBubble, Money } from "@/components/kpi";
+import { Money } from "@/components/kpi";
+import { BankLogo } from "@/components/finance/bank-logo";
+import { BANK_BRANDS, findBank } from "@/lib/bank-logos";
 import { selectClass } from "@/components/works/fields";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -192,11 +195,7 @@ function AccountCard({
       )}
     >
       <div className="flex items-center gap-3">
-        <IconBubble
-          icon={a.kind === "caixa" ? Wallet : Landmark}
-          tone={a.kind === "caixa" ? "positive" : "brand"}
-          className="h-9 w-9 rounded-lg"
-        />
+        <BankLogo account={a} className="h-9 w-9 rounded-lg" />
         <div className="min-w-0">
           <h3 className="truncate font-semibold leading-tight">{a.name}</h3>
           <p className="truncate text-xs text-muted-foreground">
@@ -292,7 +291,7 @@ function toForm(a: CompanyAccount): Form {
     holder_document: a.holder_document ?? "",
     pix_key_type: a.pix_key_type ?? "",
     pix_key: a.pix_key ?? "",
-    opening_balance: String(a.opening_balance ?? ""),
+    opening_balance: moneyText(a.opening_balance),
     is_contract_default: a.is_contract_default,
   };
 }
@@ -347,13 +346,13 @@ function AccountForm({
         name: f.name.trim(),
         kind: f.kind,
         bank: cash ? null : opt(f.bank),
-        agency: cash ? null : opt(f.agency),
-        account_number: cash ? null : opt(f.account_number),
+        agency: cash ? null : opt(formatAgency(f.agency)),
+        account_number: cash ? null : opt(formatBankAccount(f.account_number)),
         holder: opt(f.holder),
         holder_document: f.holder_document.trim() ? formatCpfCnpj(f.holder_document) : null,
         pix_key_type: cash || !f.pix_key.trim() ? null : opt(f.pix_key_type),
-        pix_key: cash ? null : opt(f.pix_key),
-        opening_balance: Number(f.opening_balance.replace(",", ".")) || 0,
+        pix_key: cash || !f.pix_key_type ? null : opt(formatPixKey(f.pix_key_type, f.pix_key)),
+        opening_balance: parseBRL(f.opening_balance),
         is_contract_default: !cash && f.is_contract_default,
       };
       const r = account
@@ -369,6 +368,13 @@ function AccountForm({
     }
   }
 
+  // Pontuação automática enquanto digita (CPF/CNPJ, agência, conta, chave PIX e saldo).
+  const masks: Partial<Record<keyof Form, (v: string) => string>> = {
+    agency: formatAgency,
+    account_number: formatBankAccount,
+    pix_key: (v) =>
+      f.pix_key_type === "email" ? v.toLowerCase() : formatPixKey(f.pix_key_type, v),
+  };
   const text = (
     k: "name" | "bank" | "agency" | "account_number" | "holder" | "pix_key",
     label: string,
@@ -376,9 +382,14 @@ function AccountForm({
   ) => (
     <label className="block space-y-1 text-sm">
       <Label>{label}</Label>
-      <Input value={f[k]} onChange={(e) => set(k, e.target.value)} {...extra} />
+      <Input
+        value={f[k]}
+        onChange={(e) => set(k, masks[k]?.(e.target.value) ?? e.target.value)}
+        {...extra}
+      />
     </label>
   );
+  const numericPix = ["cpf", "cnpj", "telefone"].includes(f.pix_key_type);
 
   return (
     <SubmitForm onSubmit={() => void save()} pending={busy} className="grid gap-3">
@@ -405,13 +416,29 @@ function AccountForm({
       </div>
       {!cash && (
         <>
-          <p className="border-t pt-3 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-            Dados bancários
-          </p>
+          <div className="flex items-center justify-between gap-3 border-t pt-3">
+            <p className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+              Dados bancários
+            </p>
+            {f.bank.trim() && (
+              <span className="flex items-center gap-2 text-xs text-muted-foreground">
+                <BankLogo account={{ bank: f.bank, kind: f.kind }} className="h-7 w-7 rounded-lg" />
+                {findBank(f.bank)?.label ?? "Logo não encontrada"}
+              </span>
+            )}
+          </div>
           <div className="grid gap-3 sm:grid-cols-[1.4fr_0.8fr_1fr]">
-            {text("bank", "Banco", { placeholder: "Ex.: Banco C6" })}
-            {text("agency", "Agência", { inputMode: "numeric" })}
-            {text("account_number", "Conta")}
+            {text("bank", "Banco", { placeholder: "Ex.: Banco C6", list: "bank-brands" })}
+            <datalist id="bank-brands">
+              {BANK_BRANDS.map((b) => (
+                <option key={b.slug} value={b.label} />
+              ))}
+            </datalist>
+            {text("agency", "Agência", { inputMode: "numeric", placeholder: "0001" })}
+            {text("account_number", "Conta", {
+              inputMode: "numeric",
+              placeholder: "39813290-9",
+            })}
           </div>
         </>
       )}
@@ -422,6 +449,7 @@ function AccountForm({
           <Input
             value={f.holder_document}
             inputMode="numeric"
+            placeholder="CPF ou CNPJ"
             onChange={(e) => set("holder_document", formatCpfCnpj(e.target.value))}
           />
         </label>
@@ -433,7 +461,15 @@ function AccountForm({
             <select
               className={selectClass}
               value={f.pix_key_type}
-              onChange={(e) => set("pix_key_type", e.target.value)}
+              onChange={(e) => {
+                const type = e.target.value;
+                // Ao escolher CPF/CNPJ, a chave já sai com o documento do titular.
+                const key =
+                  !f.pix_key.trim() && (type === "cpf" || type === "cnpj")
+                    ? f.holder_document
+                    : f.pix_key;
+                setF((p) => ({ ...p, pix_key_type: type, pix_key: formatPixKey(type, key) }));
+              }}
             >
               <option value="">Sem PIX</option>
               {PIX_KEY_TYPES.map((k) => (
@@ -443,16 +479,21 @@ function AccountForm({
               ))}
             </select>
           </label>
-          {text("pix_key", "Chave PIX", { disabled: !f.pix_key_type })}
+          {text("pix_key", "Chave PIX", {
+            disabled: !f.pix_key_type,
+            ...(numericPix ? { inputMode: "numeric" } : {}),
+            ...(f.pix_key_type === "email" ? { type: "email" } : {}),
+          })}
         </div>
       )}
       <label className="block max-w-56 space-y-1 text-sm">
         <Label>Saldo inicial (R$)</Label>
         <Input
-          type="number"
-          step="any"
+          className="num"
+          inputMode="numeric"
+          placeholder="R$ 0,00"
           value={f.opening_balance}
-          onChange={(e) => set("opening_balance", e.target.value)}
+          onChange={(e) => set("opening_balance", maskBRL(e.target.value))}
         />
       </label>
       {!cash && (

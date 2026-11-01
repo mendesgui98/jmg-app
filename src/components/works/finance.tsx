@@ -9,7 +9,6 @@ import {
   Ban,
   CalendarClock,
   Check,
-  Landmark,
   Plus,
   Receipt,
   ReceiptText,
@@ -44,6 +43,7 @@ import type { Database } from "@/integrations/supabase/types";
 import { EmptyState } from "@/components/feedback";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { IconBubble, KpiCard, Money, Segmented } from "@/components/kpi";
+import { BankLogo } from "@/components/finance/bank-logo";
 import { panelClass, segmentClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 import { CompanyAccounts } from "@/components/finance/company-accounts";
@@ -429,11 +429,7 @@ export function Finance({ workId }: { workId?: string }) {
               className="flex cursor-pointer items-center gap-2 rounded-lg border p-2 has-[:checked]:border-primary has-[:checked]:bg-primary-soft has-[:focus-visible]:ring-2 has-[:focus-visible]:ring-ring"
             >
               <input type="radio" name={name} value={a.id} required={i === 0} className="sr-only" />
-              <IconBubble
-                icon={a.kind === "caixa" ? Wallet : Landmark}
-                tone={a.kind === "caixa" ? "positive" : "brand"}
-                className="h-7 w-7 shrink-0 rounded-md"
-              />
+              <BankLogo account={a} className="h-7 w-7 shrink-0 rounded-md" />
               <span className="min-w-0 leading-tight">
                 <span className="block truncate font-medium">{a.name}</span>
                 <span className="block text-xs text-muted-foreground tabular-nums">

@@ -1,5 +1,8 @@
 import { describe, it, expect } from "vitest";
 import {
+  formatAgency,
+  formatBankAccount,
+  formatPixKey,
   formatCep,
   formatCnpj,
   formatCpf,
@@ -91,5 +94,28 @@ describe("pontuação de CEP", () => {
     expect(formatCep("013101")).toBe("01310-1");
     expect(formatCep("01310-100")).toBe("01310-100");
     expect(formatCep("0131010099")).toBe("01310-100");
+  });
+});
+
+describe("pontuação dos dados bancários", () => {
+  it("agência com 4 dígitos e, com o 5º, o traço do dígito", () => {
+    expect(formatAgency("0001")).toBe("0001");
+    expect(formatAgency("12345")).toBe("1234-5");
+    expect(formatAgency("1234-5")).toBe("1234-5");
+  });
+
+  it("conta com o traço antes do dígito, inclusive X, enquanto digita", () => {
+    expect(formatBankAccount("3")).toBe("3");
+    expect(formatBankAccount("398132909")).toBe("39813290-9");
+    expect(formatBankAccount("39813290-9")).toBe("39813290-9");
+    expect(formatBankAccount("1234x")).toBe("1234-X");
+  });
+
+  it("chave PIX pontuada conforme o tipo", () => {
+    expect(formatPixKey("cnpj", "62780542000181")).toBe("62.780.542/0001-81");
+    expect(formatPixKey("cpf", "12345678901")).toBe("123.456.789-01");
+    expect(formatPixKey("telefone", "11998937694")).toBe("(11) 99893-7694");
+    expect(formatPixKey("email", " Financeiro@JMG.com.br ")).toBe("financeiro@jmg.com.br");
+    expect(formatPixKey("aleatoria", "abc-123")).toBe("abc-123");
   });
 });
