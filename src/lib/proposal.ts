@@ -205,6 +205,20 @@ export function stageWeeks(sections: Pick<ProposalSectionRow, "start_week" | "du
   });
 }
 
+/**
+ * Datas de cada etapa a partir do início previsto do orçamento: mesma conta do banco
+ * (`budget_section_dates`) que dá as datas das etapas da obra criada pela conversão.
+ */
+export function stageDates(
+  start: string,
+  sections: Pick<ProposalSectionRow, "start_week" | "duration_weeks">[],
+) {
+  return stageWeeks(sections).map((w) => {
+    const from = addDays(start, (w.startWeek - 1) * 7);
+    return { start: from, end: addDays(from, w.weeks * 7 - 3) };
+  });
+}
+
 /** Término previsto: sexta-feira da última semana quando a obra começa numa segunda. */
 export function scheduleEnd(start: string, weeks: number) {
   return addDays(start, Math.max(1, weeks) * 7 - 3);

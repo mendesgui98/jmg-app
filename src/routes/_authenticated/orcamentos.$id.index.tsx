@@ -412,7 +412,17 @@ function Editor() {
             />
           </TabsContent>
           <TabsContent value="cronograma">
-            <ScheduleEditor sections={data.sections} locked={locked} onChange={refresh} />
+            <ScheduleEditor
+              sections={data.sections}
+              locked={locked}
+              onChange={refresh}
+              budget={budget}
+              client={proposal?.client.name ?? budget.client_display ?? null}
+              address={proposal?.site.full || null}
+              onStartDate={(start_date) =>
+                updBudget.mutateAsync({ start_date }).then(() => toast.success("Início salvo."))
+              }
+            />
           </TabsContent>
           <TabsContent value="materiais">
             <MaterialsSummary items={data.items} />
