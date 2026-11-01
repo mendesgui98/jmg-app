@@ -8,6 +8,7 @@ import {
   proposalIssues,
   proposalNumber,
   scheduleEnd,
+  stageDates,
   stageWeeks,
   type ProposalInput,
 } from "./proposal";
@@ -109,6 +110,20 @@ describe("proposta oficial", () => {
     expect(p.scheduleWeeks.map((w) => w.date)).toEqual(["16 de nov", "23 de nov", "30 de nov"]);
     expect(scheduleEnd("2026-11-16", 8)).toBe("2027-01-08");
     expect(buildProposal(input({ estimated_weeks: 6 })).weeks).toBe(6);
+  });
+
+  it("datas das etapas a partir do início previsto (mesma conta da obra)", () => {
+    expect(
+      stageDates("2026-11-16", [
+        { start_week: null, duration_weeks: 2 },
+        { start_week: null, duration_weeks: null },
+        { start_week: 2, duration_weeks: 3 },
+      ]),
+    ).toEqual([
+      { start: "2026-11-16", end: "2026-11-27" },
+      { start: "2026-11-30", end: "2026-12-04" },
+      { start: "2026-11-23", end: "2026-12-11" },
+    ]);
   });
 
   it("materiais a preço de venda e mão de obra só no total", () => {

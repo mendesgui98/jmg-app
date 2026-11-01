@@ -1,7 +1,15 @@
 import { budgetApi } from "@/lib/budget-api";
 import type { Section } from "@/lib/budget-data";
 import { commitOnEnter } from "@/lib/enter-submit";
-import { stageWeeks } from "@/lib/proposal";
+import { useState } from "react";
+import { CalendarRange, Eye } from "lucide-react";
+import { addDays, proposalNumber, stageDates, stageWeeks } from "@/lib/proposal";
+import { businessDate } from "@/lib/dashboard-math";
+import { fmtDate } from "@/lib/format";
+import type { Budget } from "@/lib/budget-data";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ScaledSheets } from "@/components/works/schedule-sheets";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,16 +18,33 @@ import { cn } from "@/lib/utils";
 
 // Cronograma estimado do PDF: cada etapa do orçamento (na ordem) com semana de início e duração.
 // Campos vazios seguem a regra de stageWeeks (começa depois da anterior e dura 1 semana).
+// "Visualizar cronograma" mostra as etapas com datas (início previsto + semanas, a mesma conta
+// que a obra usa ao ser criada) no layout do cronograma físico-financeiro do menu Cronogramas.
+
+/** Próxima segunda-feira (exemplo de início quando o orçamento ainda não tem data). */
+function nextMonday(today: string) {
+  const day = new Date(`${today}T12:00:00Z`).getUTCDay();
+  return addDays(today, day === 1 ? 0 : (8 - day) % 7 || 7);
+}
 
 export function ScheduleEditor({
   sections,
   locked,
   onChange,
+  budget,
+  client,
+  address,
+  onStartDate,
 }: {
   sections: Section[];
   locked: boolean;
   onChange: () => void;
+  budget: Pick<Budget, "start_date" | "number" | "issue_date" | "revision" | "title">;
+  client: string | null;
+  address: string | null;
+  onStartDate: (date: string | null) => Promise<unknown>;
 }) {
+  const [preview, setPreview] = useState(false);
   const weeks = stageWeeks(sections);
   const total = Math.max(0, ...weeks.map((w) => w.startWeek + w.weeks - 1));
   const save = (id: string, patch: Record<string, unknown>) =>
@@ -39,6 +64,27 @@ export function ScheduleEditor({
   return (
     <Card className="shadow-card">
       <CardContent className="space-y-4 p-4 sm:p-6">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <label className="space-y-0.5 text-xs text-muted-foreground">
+            Início previsto da obra
+            <Input
+              type="date"
+              className="w-44"
+              defaultValue={budget.start_date ?? ""}
+              key={budget.start_date ?? ""}
+              disabled={locked}
+              onKeyDown={commitOnEnter}
+              onBlur={(e) =>
+                (e.target.value || null) !== budget.start_date &&
+                void onStartDate(e.target.value || null)
+              }
+            />
+          </label>
+          <Button type="button" variant="outline" onClick={() => setPreview(true)}>
+            <Eye className="h-4 w-4" />
+            Visualizar cronograma
+          </Button>
+        </div>
         <div>
           <h3 className="text-base font-semibold">Cronograma estimado</h3>
           <p className="text-sm text-muted-foreground">
@@ -122,6 +168,77 @@ export function ScheduleEditor({
           })}
         </div>
       </CardContent>
+      <SchedulePreview
+        open={preview}
+        onClose={() => setPreview(false)}
+        sections={sections}
+        budget={budget}
+        client={client}
+        address={address}
+      />
     </Card>
+  );
+}
+
+function SchedulePreview({
+  open,
+  onClose,
+  sections,
+  budget,
+  client,
+  address,
+}: {
+  open: boolean;
+  onClose: () => void;
+  sections: Section[];
+  budget: Pick<Budget, "start_date" | "number" | "issue_date" | "revision" | "title">;
+  client: string | null;
+  address: string | null;
+}) {
+  const today = businessDate();
+  const start = budget.start_date || nextMonday(today);
+  const dates = stageDates(start, sections);
+  const orc = proposalNumber(budget.number, budget.issue_date);
+  return (
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
+      <DialogContent className="max-h-[94vh] w-[min(1200px,96vw)] max-w-none overflow-y-auto sm:max-w-none">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <CalendarRange className="h-5 w-5 text-primary" />
+            Visualização do cronograma
+          </DialogTitle>
+        </DialogHeader>
+        {!budget.start_date && (
+          <p className="rounded-lg bg-alert-soft p-3 text-sm text-alert">
+            O orçamento ainda não tem início previsto: as datas abaixo usam a próxima segunda-feira
+            ({fmtDate(start)}) só como exemplo. Informe o início previsto para ver as datas reais.
+          </p>
+        )}
+        <p className="text-sm text-muted-foreground">
+          É assim que as etapas entram no cronograma da obra quando o orçamento for aprovado e
+          convertido. Para corrigir, feche e ajuste o início previsto, a semana de início ou a
+          duração de cada etapa.
+        </p>
+        <ScaledSheets
+          title={budget.title || "Reforma"}
+          client={client}
+          address={address}
+          codes={[orc]}
+          revision={`Rev. ${String(budget.revision).padStart(2, "0")}`}
+          issued={today}
+          stages={sections.map((s, i) => ({
+            id: s.id,
+            name: s.title,
+            start: dates[i]!.start,
+            end: dates[i]!.end,
+          }))}
+        />
+        <div className="flex justify-end">
+          <Button type="button" onClick={onClose}>
+            Fechar e corrigir
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
