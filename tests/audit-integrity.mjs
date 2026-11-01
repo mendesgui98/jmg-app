@@ -202,6 +202,31 @@ await rejects(
   [receivable, cash],
   /inativa/,
 );
+// Contrato gerado com a conta escolhida: registra e guarda a cópia dos dados bancários.
+await db.query(
+  "INSERT INTO storage.objects(bucket_id,name,owner_id) VALUES('jmg-documents','contracts/generated/b1/c.pdf',$1)",
+  [admin],
+);
+const generated = await value("SELECT public.register_generated_contract($1,$2,$3,$4)", [
+  b1,
+  "contracts/generated/b1/c.pdf",
+  "CT-2026-0001",
+  other,
+]);
+assert.equal(
+  await value("SELECT bank_account->>'bank' FROM public.contracts WHERE id=$1", [generated]),
+  "Itaú",
+);
+assert.equal(
+  await value("SELECT public.register_generated_contract($1,$2,$3)", [
+    b1,
+    "contracts/generated/b1/c.pdf",
+    "CT-2026-0001",
+  ]),
+  generated,
+);
+for (const action of ["trash", "permanent"])
+  await db.query("SELECT public.manage_record_deletion('contracts',$1,$2)", [generated, action]);
 // Planejamento: dependências sem ciclo, conclusão só depois das anteriores e das pendências.
 const task = async (title) =>
   value(
@@ -461,7 +486,7 @@ assert.equal(
 );
 assert.equal(
   await value("SELECT count(*)::int FROM public.record_deletion_log WHERE action='permanent'"),
-  6,
+  7, // 6 desta seção + o contrato gerado de teste (contas da empresa)
 );
 await db.exec("RESET ROLE");
 await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [team]);
