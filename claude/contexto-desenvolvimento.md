@@ -4,6 +4,14 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-02 — PDFs leves para o celular (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** os PDFs gerados (orçamento, contrato, versões) estavam pesados, demoravam no celular, ficavam embaçados e fechavam sozinhos.
+
+**Causa:** o modo contínuo gerava UMA folha da altura do documento inteiro (orçamento de 9 etapas: 595 × 7.938 pt, 2,8 m). Leitores de PDF do celular não conseguem desenhar uma página desse tamanho: reduzem a resolução (embaçado), demoram e caem por memória. Além disso, os logos embutidos estavam em 1200 px e 600 px.
+
+**Correção:** o contínuo passa a correr em folhas do tamanho de um A4 (`@page 794×1123px`, classe `flow` em layout.ts), sem margens laterais nem cabeçalho, com a capa ocupando a primeira folha, cartões/linhas/títulos sem corte e a faixa final junto do último bloco. Logos reduzidos (branco 600 px, azul 300 px). Orçamento grande: de 1 folha de 2,8 m e 316 KB para 11 folhas A4 e 203 KB; paginado de 473 para 253 KB; contrato de 236 para 115 KB.
+
 ### 2026-11-02 — Custos fixos e Caixa da Estrutura (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** implementar a especificação "Caixa da Estrutura JMG" (artifact do Guilherme) igual ao mockup e subir para produção.

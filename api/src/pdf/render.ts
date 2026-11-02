@@ -24,6 +24,7 @@ export async function closeBrowser() {
 }
 
 const WIDTH_PX = 794; // 210 mm a 96 dpi
+const A4_HEIGHT_PX = 1123; // 297 mm a 96 dpi
 
 export type Stamp = { headerRight: string; footerLeft: string };
 
@@ -86,40 +87,19 @@ async function render(
       pdf = await PDFDocument.load(raw);
       await stampPages(pdf, stamp, logoPng);
     } else {
-      // A faixa final vai para o pé da página (.footer.pinned em layout.ts); o corpo reserva o
-      // espaço dela. Altura medida pelo corpo: com o html em overflow hidden o scroll sai menor.
-      const height = await page.evaluate(() => {
-        const footer = document.querySelector<HTMLElement>(".footer");
-        if (footer) {
-          const gap = parseFloat(getComputedStyle(footer).marginTop) || 0;
-          document.body.style.paddingBottom = `${footer.getBoundingClientRect().height + gap}px`;
-          footer.classList.add("pinned");
-        }
-        return Math.ceil(document.body.getBoundingClientRect().height);
+      // Contínuo em folhas A4 (largura da janela, sem margens): leve e nítido no celular.
+      const raw = await page.pdf({
+        width: `${WIDTH_PX}px`,
+        height: `${A4_HEIGHT_PX}px`,
+        printBackground: true,
+        margin: { top: 0, right: 0, bottom: 0, left: 0 },
       });
-      // Altura em múltiplos de 8 px (6 pt), que o PDF guarda sem arredondar; se o Chromium ainda
-      // empurrar algo para uma segunda página, cresce a folga.
-      for (const slack of [0, 8, 16, 40]) {
-        const pageHeight = Math.ceil(height / 8) * 8 + slack;
-        const raw = await page.pdf({
-          // Mesma largura da janela: com "210mm" o Chromium arredonda a página para cima e
-          // sobra um fio branco na borda direita da capa e da faixa final.
-          width: `${WIDTH_PX}px`,
-          height: `${pageHeight}px`,
-          printBackground: true,
-          margin: { top: 0, right: 0, bottom: 0, left: 0 },
-        });
-        const doc = await PDFDocument.load(raw);
-        if (doc.getPageCount() === 1) {
-          pdf = doc;
-          break;
-        }
-      }
+      pdf = await PDFDocument.load(raw);
     }
   } finally {
     await page.close();
   }
-  if (!pdf) throw new Error("O PDF contínuo não coube em uma página.");
+  if (!pdf) throw new Error("Não foi possível gerar o PDF.");
   pdf.setTitle(title);
   return Buffer.from(await pdf.save());
 }
