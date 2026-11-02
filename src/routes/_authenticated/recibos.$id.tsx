@@ -36,6 +36,11 @@ function Receipt() {
     enabled: apiConfigured && !!me?.canSeeCosts,
     retry: false,
     gcTime: 0,
+    // Gerar o documento é caro (e o contrato é registrado): só quando a pessoa pede "Atualizar",
+    // nunca ao voltar para a aba.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: () =>
       apiFile("POST", `/v1/recebimentos/${id}/recibo`, "Recibo.pdf", {
         payer: {

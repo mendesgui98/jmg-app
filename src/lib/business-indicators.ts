@@ -91,14 +91,22 @@ export interface FunnelBudget {
 
 /**
  * Funil dos orçamentos: só a última revisão de cada número conta (revisões não duplicam a
- * proposta) e orçamentos substituídos/cancelados ficam fora. Conversão = aprovados ÷ decididos
+ * proposta; havendo uma revisão aprovada, é ela que conta) e orçamentos substituídos/cancelados ficam fora. Conversão = aprovados ÷ decididos
  * (aprovados + recusados); tempo até aprovação = emissão → aprovação, em dias.
  */
 export function commercialFunnel(budgets: FunnelBudget[]) {
+  // A revisão aprovada vale enquanto existir: reabrir para edição cria uma revisão nova em
+  // elaboração, mas a obra continua contratada (não volta para "em aberto" no funil).
   const latest = new Map<number, FunnelBudget>();
   for (const b of budgets) {
     const cur = latest.get(b.number);
-    if (!cur || b.revision > cur.revision) latest.set(b.number, b);
+    const approved = (x: FunnelBudget) => x.status === "aprovado";
+    if (
+      !cur ||
+      (approved(b) && !approved(cur)) ||
+      (approved(b) === approved(cur) && b.revision > cur.revision)
+    )
+      latest.set(b.number, b);
   }
   const list = [...latest.values()].filter((b) =>
     ["elaboracao", "enviado", "aprovado", "recusado"].includes(b.status),

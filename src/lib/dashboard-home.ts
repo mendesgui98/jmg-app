@@ -144,7 +144,7 @@ export function attentionItems(
         title: `Margem ${(w.margin * 100).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}% abaixo da mínima`,
         detail: `${w.name} · mínima de ${w.minMargin}%`,
         action: "Abrir obra",
-        tab: "visao",
+        tab: "resumo",
       });
     if (!w.costConfirmed)
       out.push({
@@ -153,7 +153,7 @@ export function attentionItems(
         title: "Custo previsto não conferido",
         detail: w.name,
         action: "Conferir",
-        tab: "visao",
+        tab: "resumo",
       });
     if (!w.datedStages)
       out.push({

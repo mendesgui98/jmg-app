@@ -6,7 +6,7 @@ import { checklistByStage, checklistOptions } from "@/lib/work-checklist";
 import { stageStatus } from "@/lib/work-progress";
 import { stageLabels } from "@/lib/stage-labels";
 import { calendarDays } from "@/lib/work-schedule";
-import { fmtDate, fmtNum } from "@/lib/format";
+import { fmtDate, fmtStamp, fmtNum } from "@/lib/format";
 import { pageMeta } from "@/lib/page-meta";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -147,7 +147,7 @@ function ChecklistPdf() {
                         <td className="p-2">{item.description}</td>
                         <td className="p-2">
                           {item.checked && item.checked_at
-                            ? `${checklist.names[item.checked_by ?? ""] ?? "Usuário"} · ${fmtDate(item.checked_at.slice(0, 10))}`
+                            ? `${checklist.names[item.checked_by ?? ""] ?? "Usuário"} · ${fmtStamp(item.checked_at)}`
                             : ""}
                         </td>
                         <td className="p-2">

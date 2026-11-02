@@ -22,6 +22,32 @@ import { cn } from "@/lib/utils";
 import { Field, Attachment } from "./fields";
 import { ContractActions } from "@/components/management/contract-status";
 import { text } from "@/lib/form-values";
+
+/** Nome dos campos do modelo antigo de contrato para o aviso de dados ausentes. */
+const PLACEHOLDER_NAMES: Record<string, string> = {
+  CLIENTE: "nome do cliente",
+  DOCUMENTO: "CPF/CNPJ do cliente",
+  RG: "RG do cliente",
+  ENDERECO_CLIENTE: "endereço do cliente",
+  EMPRESA: "dados da empresa",
+  ASSINATURA_JMG: "assinatura da JMG",
+  LOCAL_DATA: "local e data",
+  TERMINO: "data de término",
+  ESCOPO: "escopo",
+  PAGAMENTOS: "parcelas de pagamento",
+  BANCO: "banco",
+  AGENCIA: "agência",
+  CONTA: "conta",
+  PIX: "chave PIX",
+  ENDERECO_OBRA: "endereço da obra",
+  DATA_ORCAMENTO: "data do orçamento",
+  ORCAMENTO: "número do orçamento",
+  VALOR: "valor do contrato",
+  VALOR_EXTENSO: "valor por extenso",
+  PRAZO: "prazo",
+  INICIO: "data de início",
+  OBJETO: "objeto do contrato",
+};
 export function Contract({
   workId,
   budgetId,
@@ -233,7 +259,13 @@ export function Contract({
           <div className="min-w-0">
             <b>Dados ausentes</b>
             <p className="break-words">
-              {missing.map((s) => s.replace(/[{}]/g, "").replace(/_/g, " ")).join(", ")}
+              {missing
+                .map((s) => {
+                  const key = s.replace(/[{}]/g, "");
+                  const name = PLACEHOLDER_NAMES[key] ?? key.replace(/_/g, " ").toLowerCase();
+                  return name.charAt(0).toUpperCase() + name.slice(1);
+                })
+                .join(", ")}
             </p>
           </div>
         </div>

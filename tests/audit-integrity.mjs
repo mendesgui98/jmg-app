@@ -582,5 +582,20 @@ await as(team, { aal: "aal1" }); // sem fator cadastrado: aal1 basta
 assert.equal(await value("SELECT public.has_role(auth.uid(),'equipe')"), true);
 await db.exec("RESET ROLE");
 await db.query("SELECT set_config('request.jwt.claims','',false)");
+// Datas de negócio no horário de Brasília (current_date do servidor é UTC).
+for (const [table, column] of [
+  ["budgets", "issue_date"],
+  ["materials", "price_updated_at"],
+  ["work_records", "record_date"],
+  ["material_movements", "record_date"],
+])
+  assert.match(
+    await value(
+      "SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name=$1 AND column_name=$2",
+      [table, column],
+    ),
+    /America\/Sao_Paulo/,
+    `${table}.${column} deve usar a data de Brasília`,
+  );
 console.log("PASS: exact grants, anon without access and 2FA enforced by the database");
 await db.close();

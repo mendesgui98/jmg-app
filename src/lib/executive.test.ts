@@ -45,8 +45,33 @@ describe("composição compartilhada", () => {
     expect(indicatorTotal(executiveComposition(fixture, {}).received)).toBe(120000));
   it("saldo contratual sem parcelas corresponde a 180 mil", () =>
     expect(indicatorTotal(executiveComposition(fixture, {}).receivable)).toBe(180000));
-  it("caixa é recebido menos 75 mil pagos, não lucro", () =>
-    expect(indicatorTotal(executiveComposition(fixture, {}).cash)).toBe(45000));
+  it("caixa da obra é recebido menos 75 mil pagos da posição inicial, não lucro", () =>
+    expect(indicatorTotal(executiveComposition(fixture, { work: "w" }).cash)).toBe(45000));
+  it("caixa da empresa é o dinheiro nas contas (igual ao Financeiro), não a posição inicial das obras", () => {
+    expect(indicatorTotal(executiveComposition(fixture, {}).cash)).toBe(0);
+    const withAccounts = {
+      ...fixture,
+      finance: {
+        ...fixture.finance,
+        accounts: [{ opening_balance: 20000 }, { opening_balance: 1250 }],
+        entries: [
+          {
+            id: "e1",
+            work_id: null,
+            person_id: null,
+            description: "Aluguel",
+            direction: "saida",
+            amount: 2500,
+            due_date: "2026-10-05",
+            canceled: false,
+          },
+        ],
+        settlements: [{ id: "s1", entry_id: "e1", amount: 2500, paid_date: "2026-10-05" }],
+      },
+    } as unknown as typeof fixture;
+    // 21.250 de saldo inicial − 2.500 pagos; o filtro de período não muda o caixa de hoje no Painel.
+    expect(indicatorTotal(executiveComposition(withAccounts, {}).cash)).toBe(18750);
+  });
   it("período não inclui posição inicial fora do intervalo", () =>
     expect(
       indicatorTotal(

@@ -6,9 +6,12 @@ export function parseBRL(text: string | null | undefined) {
   return digits ? Number(digits) / 100 : 0;
 }
 
-/** Texto do campo de moeda enquanto digita: "R$ 10.000,00"; vazio continua vazio. */
+/**
+ * Texto do campo de moeda enquanto digita: "R$ 10.000,00"; vazio continua vazio. Apagando até
+ * sobrar só zero ("R$ 0,00") o campo esvazia, senão ele travava em zero com o backspace.
+ */
 export function maskBRL(text: string | null | undefined) {
-  return /\d/.test(text ?? "") ? fmtBRL(parseBRL(text)) : "";
+  return /[1-9]/.test(text ?? "") ? fmtBRL(parseBRL(text)) : "";
 }
 
 /** Valor inicial do campo: 0 aparece vazio para mostrar o exemplo. */

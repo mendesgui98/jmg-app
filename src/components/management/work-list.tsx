@@ -17,6 +17,7 @@ import { IconBubble, Meter, Money } from "@/components/kpi";
 import { EmptyState } from "@/components/feedback";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
+import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
 export function WorkList() {
   const { data: me } = useMe();
   const [q, setQ] = useState("");
@@ -46,9 +47,9 @@ export function WorkList() {
         <TabsList className="h-auto flex-wrap justify-start">
           {[
             ["active", "Ativas"],
-            ["contratacao", "Em planejamento"],
+            ["contratacao", "Em contratação"],
             ["pausada", "Pausadas"],
-            ["concluida", "Finalizadas"],
+            ["concluida", "Concluídas"],
             ["all", "Todas"],
           ].map(([v, l]) => (
             <TabsTrigger key={v} value={v || ""}>
@@ -248,15 +249,8 @@ export function WorkList() {
   );
 }
 
-const STATUS_LABEL: Record<string, string> = {
-  execucao: "Em execução",
-  contratacao: "Em planejamento",
-  pausada: "Pausada",
-  concluida: "Finalizada",
-};
-
 function StatusBadge({ status }: { status: string }) {
-  const label = STATUS_LABEL[status] ?? status;
+  const label = WORK_STATUS_LABEL[status] ?? status;
   const variant = WORK_STATUS_VARIANT[status] ?? "neutral";
   return (
     <Badge variant={variant} className="shrink-0 whitespace-nowrap">

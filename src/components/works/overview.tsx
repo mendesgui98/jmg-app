@@ -20,6 +20,7 @@ import { worksOptions } from "@/lib/work-data";
 import { financeOptions } from "@/lib/finance-data";
 import { fmtDate, fmtNum } from "@/lib/format";
 import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
+import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
 export function WorkOverview() {
   const { data: me } = useMe();
   const { data: works = [] } = useQuery(worksOptions);
@@ -121,7 +122,7 @@ export function WorkOverview() {
                 <div className="min-w-0 flex-1">
                   <h3 className="text-sm font-semibold leading-snug">{w.name}</h3>
                   <p className="mt-0.5 text-xs text-muted-foreground">
-                    {STATUS_LABEL[w.status] ?? w.status} · {fmtDate(w.planned_end)}
+                    {WORK_STATUS_LABEL[w.status] ?? w.status} · {fmtDate(w.planned_end)}
                   </p>
                   {delayed.length > 0 && (
                     <p className="text-xs font-medium text-negative">
@@ -167,10 +168,3 @@ export function WorkOverview() {
     </section>
   );
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  execucao: "Em execução",
-  contratacao: "Em contratação",
-  pausada: "Pausada",
-  concluida: "Concluída",
-};

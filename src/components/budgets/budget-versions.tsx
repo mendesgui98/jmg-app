@@ -5,7 +5,7 @@ import { BadgeCheck, FileDown, History } from "lucide-react";
 import { budgetVersionsOptions, hasUnsavedChanges } from "@/lib/budget-versions";
 import { openDocument } from "@/lib/work-data";
 import { documentFileName } from "@/lib/file-names";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -78,7 +78,7 @@ export function BudgetVersions({
                   )}
                 </p>
                 <p className="text-xs text-muted-foreground">
-                  {fmtDate(v.created_at.slice(0, 10))} ·{" "}
+                  {fmtStamp(v.created_at)} ·{" "}
                   {new Date(v.created_at).toLocaleTimeString("pt-BR", {
                     hour: "2-digit",
                     minute: "2-digit",

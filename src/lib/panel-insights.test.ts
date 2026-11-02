@@ -60,8 +60,14 @@ describe("cashChart", () => {
 describe("weekAgenda", () => {
   const today = "2026-11-02";
   const agenda = weekAgenda(
-    [row("2026-11-05", 18500, { installment: "3ª parcela" }), row("2026-10-30", 900)],
-    [row("2026-11-03", -6200, { description: "Casa do Piso" }), row("2026-11-20", -100)],
+    [
+      row("2026-11-05", 18500, { description: "1ª medição", installment: "3/4" }),
+      row("2026-10-30", 900),
+    ],
+    [
+      row("2026-11-03", -6200, { description: "Casa do Piso", installment: "1/1" }),
+      row("2026-11-20", -100),
+    ],
     [
       {
         workId: "w2",
@@ -81,11 +87,11 @@ describe("weekAgenda", () => {
     today,
   );
 
-  it("lista em ordem de data o que vence ou começa nos próximos 7 dias", () => {
+  it("lista em ordem de data o que vence ou começa nos próximos 7 dias (nome, não só 1/1)", () => {
     expect(agenda.items.map((i) => [i.date, i.kind, i.title])).toEqual([
       ["2026-11-03", "saida", "Casa do Piso"],
       ["2026-11-04", "etapa", "Elétrica começa"],
-      ["2026-11-05", "entrada", "3ª parcela"],
+      ["2026-11-05", "entrada", "1ª medição · parcela 3/4"],
     ]);
     expect(agenda.items[0]).toMatchObject({ day: "03", weekday: "ter", amount: 6200 });
   });

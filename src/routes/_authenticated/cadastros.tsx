@@ -54,12 +54,12 @@ export const Route = createFileRoute("/_authenticated/cadastros")({
   component: Cadastros,
 });
 
-const KINDS: { k: Kind; label: string }[] = [
-  { k: "cliente", label: "Clientes" },
-  { k: "contato", label: "Contatos" },
-  { k: "arquiteto", label: "Arquitetos" },
-  { k: "fornecedor", label: "Fornecedores" },
-  { k: "prestador", label: "Prestadores" },
+const KINDS: { k: Kind; label: string; one: string }[] = [
+  { k: "cliente", label: "Clientes", one: "Cliente" },
+  { k: "contato", label: "Contatos", one: "Contato" },
+  { k: "arquiteto", label: "Arquitetos", one: "Arquiteto" },
+  { k: "fornecedor", label: "Fornecedores", one: "Fornecedor" },
+  { k: "prestador", label: "Prestadores", one: "Prestador" },
 ];
 
 const KIND_ICON: Record<Kind, LucideIcon> = {
@@ -284,7 +284,7 @@ function Cadastros() {
                   >
                     {KINDS.map((k) => (
                       <option key={k.k} value={k.k}>
-                        {k.label.slice(0, -1)}
+                        {k.one}
                       </option>
                     ))}
                   </select>

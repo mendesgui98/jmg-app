@@ -1,6 +1,9 @@
 import { businessDate } from "@/lib/dashboard-math";
 import { Link } from "@tanstack/react-router";
-import { AlertTriangle, ClipboardList } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { planningOptions } from "@/lib/planning-data";
+import { OWNER_LABEL, sortIssues, taskState, type OwnerKind } from "@/lib/planning";
+import { AlertTriangle, CircleAlert, ClipboardList, ListChecks } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
 import { WORK_STATUS_VARIANT } from "@/lib/status-badges";
 import { IconBubble } from "@/components/kpi";
@@ -12,6 +15,7 @@ import { stageLabels } from "@/lib/stage-labels";
 import { ScheduleSituation } from "./schedule-situation";
 import { scheduleSituation } from "@/lib/work-schedule";
 import type { Database } from "@/integrations/supabase/types";
+import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
 type Stage = Database["public"]["Tables"]["work_stages"]["Row"];
 type Work = Database["public"]["Tables"]["work_registry"]["Row"];
 type RecordRow = Database["public"]["Tables"]["work_records"]["Row"];
@@ -42,7 +46,26 @@ export function WorkSituation({
   const attention = stages
     .filter((s) => s.pending_services || stageStatus(s, today) === "atrasado")
     .slice(0, 3);
-  const statusLabel = STATUS_LABEL[work.status] ?? work.status;
+  // Pendências e tarefas do Planejamento desta obra (o mesmo módulo do menu Pendências).
+  const { data: plan } = useQuery(planningOptions);
+  const openIssues = plan
+    ? sortIssues(
+        plan.issues.filter((i) => i.work_id === work.id && i.status === "aberta"),
+        today,
+      )
+    : [];
+  const hotTasks = plan
+    ? plan.tasks
+        .filter((t) => t.work_id === work.id)
+        .map((t) => ({ t, state: taskState(t, plan.tasks, plan.deps, plan.issues, today) }))
+        .filter((x) => ["atrasada", "urgente", "bloqueada"].includes(x.state))
+    : [];
+  const TASK_STATE_TEXT: Record<string, string> = {
+    atrasada: "atrasada",
+    urgente: "urgente",
+    bloqueada: "esperando outra tarefa ou pendência",
+  };
+  const statusLabel = WORK_STATUS_LABEL[work.status] ?? work.status;
   const statusVariant = WORK_STATUS_VARIANT[work.status] ?? "neutral";
   return (
     <section className="space-y-4">
@@ -131,7 +154,45 @@ export function WorkSituation({
               </span>
             </Link>
           ))}
-          {!pending.length && !attention.length && (
+          {openIssues.slice(0, 3).map((i) => (
+            <Link
+              key={i.id}
+              to="/pendencias"
+              search={{ obra: work.id }}
+              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/30 sm:px-5"
+            >
+              <IconBubble icon={CircleAlert} tone={i.priority === "urgente" ? "alert" : "brand"} />
+              <span className="min-w-0">
+                <span className="font-semibold">{i.title}</span> · com{" "}
+                {(OWNER_LABEL[i.owner_kind as OwnerKind] ?? i.owner_kind).toLowerCase()}
+                {i.due_date ? ` · até ${fmtDate(i.due_date)}` : ""}
+              </span>
+            </Link>
+          ))}
+          {hotTasks.slice(0, 3).map(({ t, state }) => (
+            <Link
+              key={t.id}
+              to="/planejamento"
+              search={{ obra: work.id, view: "dia" }}
+              className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/30 sm:px-5"
+            >
+              <IconBubble icon={ListChecks} tone={state === "bloqueada" ? "brand" : "alert"} />
+              <span className="min-w-0">
+                <span className="font-semibold">{t.title}</span> · tarefa {TASK_STATE_TEXT[state]}
+                {t.planned_date ? ` · ${fmtDate(t.planned_date)}` : ""}
+              </span>
+            </Link>
+          ))}
+          {(openIssues.length > 3 || hotTasks.length > 3) && (
+            <Link
+              to="/pendencias"
+              search={{ obra: work.id }}
+              className="block px-4 py-3 text-sm font-semibold text-primary hover:underline sm:px-5"
+            >
+              Ver todas ({openIssues.length} pendências, {hotTasks.length} tarefas)
+            </Link>
+          )}
+          {!pending.length && !attention.length && !openIssues.length && !hotTasks.length && (
             <p className="px-4 py-4 text-sm text-muted-foreground sm:px-5">
               Nenhuma pendência registrada.
             </p>
@@ -141,10 +202,3 @@ export function WorkSituation({
     </section>
   );
 }
-
-const STATUS_LABEL: Record<string, string> = {
-  execucao: "Em execução",
-  contratacao: "Em contratação",
-  pausada: "Pausada",
-  concluida: "Concluída",
-};

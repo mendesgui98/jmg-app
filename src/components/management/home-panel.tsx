@@ -1,5 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { targetMargin } from "@/lib/pricing";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -147,10 +148,10 @@ function CompactFilters({ works }: { works: WorkSummary[] }) {
         onChange={(e) => set("status", e.target.value)}
       >
         <option value="">Todos os status</option>
-        <option value="contratacao">Em planejamento</option>
+        <option value="contratacao">Em contratação</option>
         <option value="execucao">Em execução</option>
         <option value="pausada">Pausada</option>
-        <option value="concluida">Finalizada</option>
+        <option value="concluida">Concluída</option>
       </select>
       <label className="ml-auto flex items-center gap-2 text-xs text-muted-foreground">
         <input
@@ -226,6 +227,7 @@ export interface PanelHeroProps {
 function PanelHero({
   hero,
   compositions,
+  cashNow,
   chart,
   activeCount,
   pctReceived,
@@ -234,6 +236,8 @@ function PanelHero({
 }: {
   hero: PanelHeroProps;
   compositions: Compositions;
+  /** Saldo de hoje: sempre todos os períodos (o filtro de período não muda o caixa de hoje). */
+  cashNow: number;
   chart: ReturnType<typeof cashChart>;
   activeCount: number;
   pctReceived: number;
@@ -242,7 +246,7 @@ function PanelHero({
 }) {
   const brl = useBRL();
   const total = (id: Indicator) => indicatorTotal(compositions[id]);
-  const cash = total("cash");
+  const cash = cashNow;
   const past = chart.months.filter((m) => !m.future);
   const prev = past.at(-2);
   const change = prev && cash !== null ? cash - prev.balance : null;
@@ -553,7 +557,7 @@ function useAttentionItems(works: WorkSummary[]) {
         name: s.work.name,
         status: s.work.status,
         overdue: s.overdue,
-        margin: confirmed && s.result.sale > 0 ? s.result.margin : null,
+        margin: confirmed && s.result.sale > 0 ? targetMargin(s.budget.params, s.result) : null,
         minMargin: Number(s.budget.params?.min_margin) || 0,
         costConfirmed: confirmed,
         datedStages: s.stages.filter((x) => x.planned_start).length,
@@ -978,7 +982,7 @@ function MarginCard({ works }: { works: WorkSummary[] }) {
         return {
           id: s.work.id,
           name: s.work.name,
-          margin: confirmed && s.result.sale > 0 ? s.result.margin : null,
+          margin: confirmed && s.result.sale > 0 ? targetMargin(s.budget.params, s.result) : null,
           target: Number(s.budget.params?.desired_margin) || 0,
           min: Number(s.budget.params?.min_margin) || 0,
         };
@@ -992,7 +996,7 @@ function MarginCard({ works }: { works: WorkSummary[] }) {
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <h3 className="text-base font-bold">Margem por obra</h3>
         <span className="text-xs text-muted-foreground">
-          resultado previsto ÷ valor da obra
+          margem prevista na mesma base da meta de cada orçamento
           {target > 0 ? ` · linha = meta de ${fmtNum(target)}%` : ""}
         </span>
       </div>
@@ -1172,7 +1176,7 @@ function SalesKpis({ f }: { f: ReturnType<typeof commercialFunnel> | null }) {
           className={cn("flex min-h-28 min-w-0 flex-col gap-1 rounded-2xl p-4 shadow-card", k.cls)}
         >
           <span className="text-xs font-semibold opacity-85">{k.label}</span>
-          <b className="truncate text-xl font-extrabold tracking-tight num sm:text-2xl">
+          <b className="text-lg font-extrabold leading-tight tracking-tight num sm:text-xl">
             {k.value}
           </b>
           <span className="text-xs opacity-85">{k.hint}</span>
@@ -1312,7 +1316,10 @@ export function HomeDashboard({
   const planning = active.filter((s) => s.work.status === "contratacao").length;
   const running = active.filter((s) => s.work.status === "execucao").length;
   const value = total("value") ?? 0;
-  const receivedActive = active.reduce((n, s) => n + s.totals.received, 0);
+  // Mesma base do "valor em obras ativas" (execução e contratação), senão o % sai inflado.
+  const receivedActive = active
+    .filter((s) => ["execucao", "contratacao"].includes(s.work.status))
+    .reduce((n, s) => n + s.totals.received, 0);
   const pctReceived = value > 0 ? Math.min(100, (receivedActive / value) * 100) : 0;
   const today = businessDate();
   // R2-1: projeção a partir do saldo de hoje, sempre com todos os vencimentos (sem filtro de período).
@@ -1390,6 +1397,7 @@ export function HomeDashboard({
       <PanelHero
         hero={hero}
         compositions={compositions}
+        cashNow={cashNow}
         chart={chart}
         activeCount={active.length}
         pctReceived={pctReceived}
@@ -1398,7 +1406,7 @@ export function HomeDashboard({
       />
       <CompactFilters works={allWorks} />
 
-      <div className="grid gap-4 lg:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
         <Attention works={works} company={company} />
         <WeekCard agenda={agenda} />
       </div>
@@ -1407,7 +1415,7 @@ export function HomeDashboard({
         <SectionTitle id="painel-dinheiro" icon={Wallet} tone="bg-primary text-primary-foreground">
           Dinheiro
         </SectionTitle>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <CashChartCard chart={chart} projection={projection} />
           <DelinquencyCard d={late} />
         </div>
@@ -1426,7 +1434,7 @@ export function HomeDashboard({
                 className="rounded-full bg-primary-soft px-3 py-1.5 text-xs font-semibold text-primary hover:brightness-95"
               >
                 {count(running, "em execução", "em execução")} ·{" "}
-                {count(planning, "em planejamento", "em planejamento")}
+                {count(planning, "em contratação", "em contratação")}
               </button>
               <button
                 type="button"
@@ -1469,7 +1477,7 @@ export function HomeDashboard({
         ) : view === "lista" ? (
           <WorkList cards={works} />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
             {works.map((s) => (
               <WorkCard key={s.work.id} s={s} />
             ))}
@@ -1491,7 +1499,7 @@ export function HomeDashboard({
         <SectionTitle id="painel-comercial" icon={Filter} tone="bg-hero text-gold">
           Comercial
         </SectionTitle>
-        <div className="grid gap-4 lg:grid-cols-3">
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <FunnelCard f={funnel} inWork={inWork} />
           <SalesKpis f={funnel} />
           <FollowUpCard list={pending} />

@@ -59,6 +59,11 @@ function Pdf() {
     enabled: apiConfigured && (!isContract || !!conta),
     retry: false,
     gcTime: 0,
+    // Gerar o documento é caro (e o contrato é registrado): só quando a pessoa pede "Atualizar",
+    // nunca ao voltar para a aba.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     queryFn: () =>
       apiFile(
         "POST",

@@ -4,6 +4,27 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-02 — Correção dos erros da revisão completa (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** corrigir todos os erros encontrados na revisão da plataforma (relatório "Revisão JMG Obras"); indicadores novos ficam para decidir depois.
+
+**Corrigido:**
+
+- Financeiro: valores em centavos (`cents`/`remaining`). "Recebi/Paguei" depois de baixa parcial não é mais recusado e conta quitada em duas baixas não fica "aberta com R$ 0,00".
+- Rascunhos: o de entrada/saída e o de "Nova obra" são apagados depois de salvar (`clearDraft`); o de baixa é separado por conta.
+- Caixa do Painel = caixa do Financeiro (saldo inicial das contas + baixas), sem mudar com o filtro de período.
+- Margem comparada na mesma base da meta (`targetMargin`); cartão do orçamento diz "Margem sobre a mão de obra" e mostra a margem sobre o total na dica.
+- Celular: Painel e orçamento não encolhem mais (grades com `grid-cols-1`).
+- "Precisa de você" abre a aba certa (`resumo`); agenda mostra o nome do lançamento, não "1/1".
+- Estimativa vazia não grava "falta R$ 0"; PDFs não são gerados de novo ao voltar à aba.
+- Datas: padrões do banco no horário de Brasília (migração `20261102000043`) e `fmtStamp` nas datas de registros.
+- "Preço negociado" esvazia com backspace; funil não perde o aprovado ao reabrir; "% recebido" na mesma base.
+- Textos que eram erro: situação da obra com um nome só (`work-status.ts`), sem "EXECUCAO"/"aguardando_assinatura"/"fornecedor" crus, "Fornecedor/Prestador" no cadastro, situação da etapa no feminino, aviso do contrato antigo com nomes legíveis, "Tipo não informado" escondido, valores do Comercial sem corte.
+- Obra: "Pendências principais" lê Pendências e Planejamento; orçado × realizado compara com o executado (`earnedVariance`).
+- API: fila de PDFs nunca passa de 3 (teste `render-slot.test.ts`).
+
+**Ficou para os próximos pacotes:** tradução central das mensagens de erro do sistema, máscara de R$ nos campos antigos, reescrita dos demais textos e os indicadores novos.
+
 ### 2026-11-02 — Varredura de segurança e endurecimento (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** varrer a plataforma inteira atrás de vulnerabilidades, mapear, corrigir e fortalecer.

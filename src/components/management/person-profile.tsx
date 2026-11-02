@@ -29,18 +29,26 @@ import { fmtBRL, fmtDate } from "@/lib/format";
 import { entryState } from "@/lib/dashboard-math";
 import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
-import { BUDGET_STATUS_VARIANT, WORK_STATUS_VARIANT } from "@/lib/status-badges";
+import { BUDGET_STATUS_VARIANT, CONTRACT_STATUS, WORK_STATUS_VARIANT } from "@/lib/status-badges";
 import { IconBubble, KpiCard, Money, type Tone } from "@/components/kpi";
 import { STATUS_LABEL as BUDGET_STATUS_LABEL } from "@/lib/budget-status";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 import type { ReactNode } from "react";
+import { WORK_STATUS_LABEL } from "@/lib/work-status";
 
-const WORK_STATUS_LABEL: Record<string, string> = {
-  contratacao: "Em contratação",
-  execucao: "Em execução",
-  pausada: "Pausada",
-  concluida: "Concluída",
+const KIND_LABEL: Record<string, string> = {
+  cliente: "Cliente",
+  contato: "Contato",
+  arquiteto: "Arquiteto",
+  fornecedor: "Fornecedor",
+  prestador: "Prestador",
+};
+const PURCHASE_STATUS: Record<string, string> = {
+  pedido: "Pedido",
+  parcial: "Recebido em parte",
+  recebido: "Recebido",
+  cancelado: "Cancelado",
 };
 
 /** Seção do perfil: título discreto e lista num painel suave. */
@@ -186,7 +194,7 @@ export function PersonProfile({ id }: { id: string }) {
       </Link>
       <PageHeader
         title={person.name}
-        subtitle={`${person.kind} · ${person.active ? "Ativo" : "Arquivado"}`}
+        subtitle={`${KIND_LABEL[person.kind] ?? person.kind} · ${person.active ? "Ativo" : "Arquivado"}`}
         actions={
           <>
             <RecordDeleteButton entity="people" id={id} name={person.name} />
@@ -305,7 +313,7 @@ export function PersonProfile({ id }: { id: string }) {
                 </Link>
                 <span className="flex items-center gap-2">
                   <Badge variant={c.status === "assinado" ? "positive" : "neutral"}>
-                    {c.status}
+                    {CONTRACT_STATUS[c.status]?.label ?? c.status}
                   </Badge>
                   <Attachment path={c.signed_path} />
                 </span>
@@ -329,7 +337,7 @@ export function PersonProfile({ id }: { id: string }) {
                   </Link>
                   <span className="flex items-center gap-2">
                     <Badge variant={p.status === "cancelado" ? "neutral" : "info"}>
-                      {p.status}
+                      {PURCHASE_STATUS[p.status] ?? p.status}
                     </Badge>
                     <Money
                       className="font-semibold"

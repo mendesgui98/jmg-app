@@ -623,8 +623,26 @@ export function computeWorkResult(
     remainingEstimate,
     estimateConfirmed: additional !== null,
     margin: sale > 0 ? result / sale : 0,
+    /** Resultado ÷ preço da mão de obra (venda − materiais): a base dos orçamentos novos. */
+    laborMargin: sale - base.materialsNet > 0 ? result / (sale - base.materialsNet) : 0,
   };
 }
+
+/**
+ * Margem na mesma base das metas do orçamento (`desired_margin`/`min_margin`): sobre a mão de
+ * obra nos orçamentos com os percentuais só sobre ela, senão sobre a venda total.
+ */
+export function targetMargin(
+  params: Pick<PricingParams, "model" | "rates_base"> | null | undefined,
+  r: { margin: number; laborMargin?: number },
+) {
+  return params && laborRatesBase(params) && r.laborMargin !== undefined ? r.laborMargin : r.margin;
+}
+
+/** Nome da base da margem, para os rótulos ("sobre a mão de obra" / "sobre a venda"). */
+export const marginBaseLabel = (
+  params: Pick<PricingParams, "model" | "rates_base"> | null | undefined,
+) => (params && laborRatesBase(params) ? "sobre a mão de obra" : "sobre a venda");
 
 /** Contract value supplied directly, without inferred catalog pricing or rates. */
 export function directContractBase(value: number): BudgetResult {

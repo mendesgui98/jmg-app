@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 import { CalendarDays, ChevronRight, MapPin, User, Wallet } from "lucide-react";
 import type { WorkSummary } from "@/lib/dashboard-data";
+import { marginBaseLabel, targetMargin } from "@/lib/pricing";
 import { progressAttention } from "@/lib/work-progress";
 import { businessDate } from "@/lib/dashboard-math";
 import {
@@ -15,13 +16,7 @@ import { useBRL } from "@/lib/hidden-values";
 import { Button } from "@/components/ui/button";
 import { Money } from "@/components/kpi";
 import { cn } from "@/lib/utils";
-
-const STATUS_LABEL: Record<string, string> = {
-  execucao: "Em execução",
-  contratacao: "Em planejamento",
-  pausada: "Pausada",
-  concluida: "Finalizada",
-};
+import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
 
 const STAGE_TONE: Record<StageState, string> = {
   concluida: "bg-primary",
@@ -50,18 +45,19 @@ export function WorkCard({ s }: { s: WorkSummary }) {
   const timeline = stageTimeline(s.stages, businessDate());
   const next = nextStage(timeline);
   const pace = receiptPace(s.progress, s.balance.financialProgress);
-  const lowMargin =
-    !unconfirmed && s.result.sale > 0 && minMargin > 0 && s.result.margin * 100 < minMargin;
+  // Margem na mesma base da mínima do orçamento (sobre a mão de obra nos orçamentos novos).
+  const margin = targetMargin(s.budget.params, s.result);
+  const lowMargin = !unconfirmed && s.result.sale > 0 && minMargin > 0 && margin * 100 < minMargin;
   return (
     <article className="group flex min-w-0 flex-col overflow-hidden rounded-2xl border border-border/70 bg-card shadow-card transition-shadow hover:shadow-elevated">
       <div className="flex items-start justify-between gap-2 bg-gradient-to-br from-hero to-hero-end px-5 py-4 text-hero-foreground">
         <div className="flex flex-wrap gap-1.5">
           <span className="rounded-full bg-white/15 px-2.5 py-1 text-xs font-semibold">
-            {STATUS_LABEL[s.work.status] ?? s.work.status}
+            {WORK_STATUS_LABEL[s.work.status] ?? s.work.status}
           </span>
           {lowMargin && (
             <span className="rounded-full bg-gold px-2.5 py-1 text-xs font-semibold text-hero-end">
-              Margem {fmtNum(Math.round(s.result.margin * 1000) / 10)}%
+              Margem {fmtNum(Math.round(margin * 1000) / 10)}%
             </span>
           )}
           {s.overdue > 0 && (
@@ -97,10 +93,13 @@ export function WorkCard({ s }: { s: WorkSummary }) {
             <h3 className="text-lg font-bold uppercase leading-tight tracking-tight break-words">
               {s.work.name}
             </h3>
-            <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
-              {s.work.work_type || "Tipo não informado"}
-              {s.work.is_pilot ? " · Piloto — teste" : ""}
-            </p>
+            {(s.work.work_type || s.work.is_pilot) && (
+              <p className="mt-1 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+                {[s.work.work_type, s.work.is_pilot ? "Obra de teste" : ""]
+                  .filter(Boolean)
+                  .join(" · ")}
+              </p>
+            )}
           </div>
           <ChevronRight
             aria-hidden
@@ -167,7 +166,7 @@ export function WorkCard({ s }: { s: WorkSummary }) {
             <p className="truncate text-[11px] text-muted-foreground">
               {unconfirmed || s.result.sale <= 0
                 ? "custo previsto pendente"
-                : `margem ${fmtNum(Math.round(s.result.margin * 1000) / 10)}%`}
+                : `margem ${fmtNum(Math.round(margin * 1000) / 10)}% ${marginBaseLabel(s.budget.params).replace("sobre a ", "s/ ")}`}
             </p>
           </div>
         </div>
