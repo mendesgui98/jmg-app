@@ -7,7 +7,13 @@ CREATE TABLE auth.users(id uuid PRIMARY KEY,email text,raw_user_meta_data jsonb 
 CREATE FUNCTION auth.uid() RETURNS uuid LANGUAGE sql STABLE AS $$ SELECT nullif(current_setting('request.jwt.claim.sub',true),'')::uuid $$;
 CREATE TABLE storage.objects(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),bucket_id text,name text,owner_id text); ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
 CREATE FUNCTION storage.foldername(text) RETURNS text[] LANGUAGE sql AS $$ SELECT string_to_array($1,'/') $$;
-GRANT USAGE ON SCHEMA auth,storage,public TO authenticated,anon; GRANT SELECT,INSERT,DELETE ON storage.objects TO authenticated; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;`);
+CREATE TABLE auth.mfa_factors(id uuid PRIMARY KEY DEFAULT gen_random_uuid(),user_id uuid,status text);
+GRANT USAGE ON SCHEMA auth,storage,public TO authenticated,anon; GRANT SELECT,INSERT,DELETE ON storage.objects TO authenticated; GRANT EXECUTE ON FUNCTION auth.uid() TO authenticated,anon;
+-- Como a imagem do Supabase: tudo do schema public liberado por padrão para anon/authenticated.
+-- As migrações precisam fechar isso (20261102000042_security_hardening).
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON FUNCTIONS TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO anon, authenticated, service_role;`);
 for (const name of (await readdir("supabase/migrations"))
   .filter((n) => n.endsWith(".sql"))
   .sort()) {
@@ -501,4 +507,80 @@ await db.exec("RESET ROLE");
 console.log(
   "PASS: trash/restore, permanent deletion, signed contracts, approved proposals, linked records, schedule versions, no header resurrection and administrator-only access",
 );
+// Segurança: permissões exatas (o padrão do Supabase liberava tudo), 2FA no banco e anon sem acesso.
+const fin = "00000000-0000-0000-0000-000000000004";
+await db.query("INSERT INTO auth.users(id,email) VALUES($1,'fin@local')", [fin]);
+await db.query("INSERT INTO public.user_roles(user_id,role) VALUES($1,'financeiro')", [fin]);
+const as = async (uid, claims = null) => {
+  await db.exec("RESET ROLE");
+  await db.query("SELECT set_config('request.jwt.claim.sub',$1,false)", [uid]);
+  await db.query("SELECT set_config('request.jwt.claims',$1,false)", [
+    claims ? JSON.stringify({ sub: uid, role: "authenticated", ...claims }) : "",
+  ]);
+  await db.exec("SET ROLE authenticated");
+};
+await as(fin);
+for (const [sql, args] of [
+  ["DELETE FROM public.financial_settlements WHERE id=$1", [settled]],
+  ["UPDATE public.financial_settlements SET amount=1 WHERE id=$1", [settled]],
+  ["DELETE FROM public.financial_entries WHERE id=$1", [entry]],
+  ["DELETE FROM public.expense_allocations WHERE entry_id=$1", [entry]],
+  ["DELETE FROM public.work_openings", []],
+  ["DELETE FROM public.work_history", []],
+  ["DELETE FROM public.work_registry WHERE id=$1", [work]],
+  ["UPDATE public.budget_history SET summary='{}'", []],
+  ["TRUNCATE public.financial_settlements", []],
+]) {
+  await rejects(sql, args, /permission denied/);
+}
+// Parcelamento trava o grupo (FOR UPDATE) sem precisar de UPDATE liberado nos grupos.
+const group = await value(
+  `SELECT public.create_financial_installments(gen_random_uuid(),null,'manual','Parcelado','saida','Outros',null,100,$1::jsonb,false,null,null,null,null)`,
+  [
+    JSON.stringify([
+      { amount: 60, due_date: "2026-11-10" },
+      { amount: 40, due_date: "2026-12-10" },
+    ]),
+  ],
+);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.financial_entries WHERE group_id=$1", [group]),
+  2,
+);
+await rejects(
+  "UPDATE public.financial_groups SET total=1 WHERE id=$1",
+  [group],
+  /permission denied/,
+);
+await as(team);
+await rejects("DELETE FROM public.work_stages WHERE work_id=$1", [work], /permission denied/);
+await rejects("DELETE FROM public.work_records WHERE work_id=$1", [work], /permission denied/);
+await rejects("UPDATE public.profiles SET email='x@evil' WHERE id=$1", [team], /permission denied/);
+await db.query("UPDATE public.profiles SET full_name='Equipe' WHERE id=$1", [team]);
+await rejects("SELECT public.capture_schedule_version($1,'x')", [work], /permission denied/);
+await db.exec("RESET ROLE");
+await db.exec("SET ROLE anon");
+await rejects("SELECT public.can_see_costs($1)", [admin], /permission denied/);
+await rejects("SELECT public.has_role($1,'admin')", [admin], /permission denied/);
+await rejects("SELECT count(*) FROM public.people", [], /permission denied/);
+await rejects("SELECT nextval('public.budget_number_seq')", [], /permission denied/);
+// 2FA: com segundo fator verificado, sessão aal1 não exerce papel (nem lê custos); aal2 sim.
+await db.exec("RESET ROLE");
+await db.query("INSERT INTO auth.mfa_factors(user_id,status) VALUES($1,'verified')", [fin]);
+await as(fin, { aal: "aal1" });
+assert.equal(await value("SELECT public.can_see_costs(auth.uid())"), false);
+assert.equal(await value("SELECT count(*)::int FROM public.financial_entries"), 0);
+await rejects(
+  "INSERT INTO public.people(kind,name) VALUES('cliente','Sem 2FA')",
+  [],
+  /row-level security/i,
+);
+await as(fin, { aal: "aal2" });
+assert.equal(await value("SELECT public.can_see_costs(auth.uid())"), true);
+assert.ok((await value("SELECT count(*)::int FROM public.financial_entries")) > 0);
+await as(team, { aal: "aal1" }); // sem fator cadastrado: aal1 basta
+assert.equal(await value("SELECT public.has_role(auth.uid(),'equipe')"), true);
+await db.exec("RESET ROLE");
+await db.query("SELECT set_config('request.jwt.claims','',false)");
+console.log("PASS: exact grants, anon without access and 2FA enforced by the database");
 await db.close();

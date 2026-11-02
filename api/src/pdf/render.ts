@@ -27,7 +27,43 @@ const WIDTH_PX = 794; // 210 mm a 96 dpi
 
 export type Stamp = { headerRight: string; footerLeft: string };
 
-export async function htmlToPdf(
+// O HTML dos documentos é fechado: fontes e imagens embutidas (data:), nada de script do modelo
+// nem acesso à rede. A política abaixo e o bloqueio de rotas garantem isso mesmo se algum dado
+// escapar do `esc` — o Chromium roda dentro da rede interna (banco, auth, meta).
+const DOC_CSP =
+  "default-src 'none'; img-src data:; font-src data:; style-src 'unsafe-inline'; script-src 'none'";
+
+export function lockDocument(html: string) {
+  const meta = `<meta http-equiv="Content-Security-Policy" content="${DOC_CSP}">`;
+  return /<head[^>]*>/i.test(html) ? html.replace(/<head[^>]*>/i, (h) => h + meta) : meta + html;
+}
+
+// No máximo 3 documentos gerados ao mesmo tempo (memória do Chromium).
+const MAX_RENDERS = 3;
+let running = 0;
+const waiting: (() => void)[] = [];
+async function slot<T>(work: () => Promise<T>): Promise<T> {
+  if (running >= MAX_RENDERS) await new Promise<void>((r) => waiting.push(r));
+  running++;
+  try {
+    return await work();
+  } finally {
+    running--;
+    waiting.shift()?.();
+  }
+}
+
+export function htmlToPdf(
+  html: string,
+  title: string,
+  layout: PdfLayout,
+  stamp: Stamp,
+  logoPng: Uint8Array,
+): Promise<Buffer> {
+  return slot(() => render(lockDocument(html), title, layout, stamp, logoPng));
+}
+
+async function render(
   html: string,
   title: string,
   layout: PdfLayout,
@@ -35,6 +71,8 @@ export async function htmlToPdf(
   logoPng: Uint8Array,
 ): Promise<Buffer> {
   const page = await (await getBrowser()).newPage({ viewport: { width: WIDTH_PX, height: 1123 } });
+  // Nenhuma requisição sai da página (só data: é carregado, e isso não passa por aqui).
+  await page.route("**/*", (route) => route.abort());
   let pdf: PDFDocument | null = null;
   try {
     await page.setContent(html, { waitUntil: "load" });

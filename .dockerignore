@@ -10,3 +10,4 @@ infra/.env
 infra/volumes
 package-lock.json
 *.log
+!api/package-lock.json

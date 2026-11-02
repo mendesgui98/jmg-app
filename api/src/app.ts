@@ -44,9 +44,7 @@ const receiptSchema = z
     transactionId: optText,
   })
   .default({});
-const contractSchema = z
-  .object({ account_id: z.string().uuid("Conta inválida").optional() })
-  .default({});
+const contractSchema = z.object({ account_id: z.guid("Conta inválida").optional() }).default({});
 const rolesSchema = z.object({ roles: z.array(z.enum(ROLES)).max(3) });
 
 function parse<T>(schema: z.ZodType<T>, value: unknown): T {

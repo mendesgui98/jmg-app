@@ -39,6 +39,7 @@ work/
 .env.*
 !.env.example
 package-lock.json
+!api/package-lock.json
 
 # Gerado por bun run dev:all
 .env.development.local

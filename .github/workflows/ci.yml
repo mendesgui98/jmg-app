@@ -35,6 +35,8 @@ jobs:
       - run: bun run lint
       - run: bun run test
       - run: bun run test:db
+      # Dependências da API travadas (as mesmas da imagem): api/package-lock.json.
+      - run: npm ci --prefix api --no-audit --no-fund
       - run: bun run api:typecheck
       - run: bun run api:test
       - run: bun run build
@@ -190,6 +192,7 @@ jobs:
           ANON_KEY: ${{ secrets.ANON_KEY }}
           SERVICE_ROLE_KEY: ${{ secrets.SERVICE_ROLE_KEY }}
           VPS_SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
+          VPS_KNOWN_HOSTS: ${{ vars.VPS_KNOWN_HOSTS }}
         run: |
           missing=""
           for v in VPS_HOST APP_DOMAIN API_DOMAIN ACME_EMAIL POSTGRES_PASSWORD JWT_SECRET ANON_KEY SERVICE_ROLE_KEY VPS_SSH_KEY; do
@@ -237,6 +240,13 @@ jobs:
           # por padrão e derrubava o deploy sem mensagem; agora tenta várias vezes com folga.
           printf 'Host *\n  ConnectTimeout 20\n  ConnectionAttempts 3\n  ServerAliveInterval 15\n  ServerAliveCountMax 8\n' > ~/.ssh/config
           chmod 600 ~/.ssh/config
+          # Com a variável VPS_KNOWN_HOSTS (saída de `ssh-keyscan` da VPS, conferida uma vez) a chave do
+          # servidor fica fixada e um servidor falso no meio do caminho é recusado. Sem ela, confia na
+          # primeira chave que a VPS apresentar (como antes).
+          if [ -n "$VPS_KNOWN_HOSTS" ]; then
+            printf '%s\n' "$VPS_KNOWN_HOSTS" >> ~/.ssh/known_hosts
+          else
+          echo "::warning::Defina a variável VPS_KNOWN_HOSTS para fixar a chave SSH da VPS (docs/deploy-vps.md)."
           for i in 1 2 3 4 5 6; do
             if keys=$(ssh-keyscan -T 15 -p "$VPS_PORT" -H "$VPS_HOST" 2>/dev/null) && [ -n "$keys" ]; then
               printf '%s\n' "$keys" >> ~/.ssh/known_hosts
@@ -249,6 +259,7 @@ jobs:
             echo "VPS sem resposta no SSH (tentativa $i de 6); nova tentativa em 15 s."
             sleep 15
           done
+          fi
 
       - name: Enviar configuração para a VPS
         run: |

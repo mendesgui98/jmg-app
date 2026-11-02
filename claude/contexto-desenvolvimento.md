@@ -4,6 +4,39 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-02 — Varredura de segurança e endurecimento (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** varrer a plataforma inteira atrás de vulnerabilidades, mapear, corrigir e fortalecer.
+
+**Achados e correções:**
+
+- **Alta — permissões padrão do Supabase.** A imagem concede ALL em tabelas/funções/sequências do
+  schema public para anon e authenticated, então os GRANTs estreitos das migrações não valiam: a
+  equipe podia apagar etapas e registros de obra; o financeiro podia alterar/apagar baixas,
+  lançamentos, extras, aberturas, rateios, transferências e o histórico. Migração
+  `20261102000042_security_hardening.sql`: desliga o padrão (`ALTER DEFAULT PRIVILEGES`), zera e
+  concede só o previsto por tabela (lista tirada do estado das migrações sem o padrão e conferida
+  contra todo `supabase.from/rpc` do app e da API), anon sem EXECUTE em nada, funções internas
+  (`capture_schedule_version`, `validate_standalone_stages`) fora do alcance do usuário,
+  `guard_installment_entry` como SECURITY DEFINER (trava o grupo com FOR UPDATE sem liberar UPDATE)
+  e perfil só com o nome editável. O teste do banco agora simula o padrão do Supabase; sem a
+  migração ele falha.
+- **Média — 2FA só na tela/API.** `mfa_satisfied()` dentro de `has_role`/`can_see_costs`: quem tem
+  fator verificado só exerce papel com a sessão em aal2 (antes dava para pular pelo PostgREST).
+- **Média — cabeçalhos.** Caddy: CSP no app (só a própria origem + API), Permissions-Policy, COOP;
+  HSTS/nosniff/X-Frame-Options na API; arquivos do storage nunca executam script. Conferido com
+  build de produção + Playwright (sem violações; fetch para fora bloqueado).
+- **Média — PDF.** Chromium da API sem rede (`page.route` aborta tudo), CSP no HTML do documento e
+  no máximo 3 gerações simultâneas.
+- **Baixa:** fila offline de registros e rascunhos separados por usuário (limpos ao sair); rota
+  da API com `%` inválido responde 400; dependências da API travadas em `api/package-lock.json`
+  (`npm ci`), zod 4.6.7 na API, seroval 1.6.11/vite 8.1.6/vitest 4.1.12 no app; deploy aceita a
+  chave SSH fixada em `VPS_KNOWN_HOSTS`.
+
+**Recomendações manuais (fora do código):** desligar login SSH por senha na VPS, desativar o
+projeto antigo do Supabase cloud, ativar 2FA para todos os administradores, preencher
+`VPS_KNOWN_HOSTS`.
+
 ### 2026-11-01 — Planejamento e Pendências (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** no menu Execução, depois de Cronogramas, um item Planejamento para planejar as obras por semana e por dia (tarefas urgentes e tarefas que precisam terminar para liberar outras) e um item Pendências. Decisões do Guilherme: a equipe vê os dois e marca tarefas; PDF para mandar às equipes (semana, obra, responsável); concluir tarefa não mexe no avanço (o cronograma continua por etapa); responsável do Cadastros ou nome livre; pendências automáticas junto; semana de segunda a domingo.

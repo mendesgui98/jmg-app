@@ -43,6 +43,15 @@ function Shell() {
   async function signOut() {
     await qc.cancelQueries();
     qc.clear();
+    // Rascunhos de formulário deste usuário não ficam no aparelho depois de sair.
+    try {
+      if (me?.id)
+        Object.keys(localStorage)
+          .filter((k) => k.startsWith(`jmg-draft:${me.id}:`))
+          .forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // sem acesso ao armazenamento: nada a limpar
+    }
     await supabase.auth.signOut();
     navigate({ to: "/auth", replace: true });
   }
