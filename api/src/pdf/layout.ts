@@ -52,20 +52,20 @@ export function footerHtml(assets: Assets, c: ProposalData["company"]) {
   ${esc(c.phone)} · ${esc(c.instagram)}</div></div><div class="stripe"><i></i><i></i></div></footer>`;
 }
 
-/** Raiz do documento: a classe troca as regras de página (paged = A4 com margens; flow = contínuo). */
+/** Raiz do documento: no modo paginado a classe troca as regras de página (pagedCss). */
 export const htmlOpen = (layout: PdfLayout) =>
-  `<!doctype html><html lang="pt-BR" class="${layout === "paginado" ? "paged" : "flow"}">`;
+  `<!doctype html><html lang="pt-BR"${layout === "paginado" ? ` class="paged"` : ""}>`;
 
 /**
- * Contínuo: o documento corre sem margens nem cabeçalho, mas em folhas do tamanho de um A4 em
- * pé (794 × 1123 px) — uma folha única de vários metros deixava o PDF embaçado e travava o leitor
- * do celular. Cartões, linhas de tabela e títulos não são cortados entre folhas.
+ * Página contínua: o PDF arredonda largura e altura para cima. O conteúdo passa 2 px da lateral
+ * (cortados) e a faixa final fica presa ao pé da página (render.ts reserva o espaço dela), então
+ * a folga de altura vira espaço branco antes da faixa, sem fio na borda.
  */
-const CONTINUOUS_PAGE = `@page { size: 794px 1123px; margin: 12mm 0 10mm; }
-@page :first { margin: 0; }
-.flow .cover, .flow .cover.compact { height: 297mm; break-after: page; }
-.flow .cover .hero, .flow .cover.compact .hero { top: 108mm; } .flow .cover .card { top: 212mm; }
-.flow .cover .facts, .flow .cover.compact .facts { top: 258mm; } .flow .cover.compact .mark { top: 52mm; }`;
+const CONTINUOUS_PAGE = `@page { margin: 0; }
+html { overflow: hidden; }
+.footer.pinned { position: fixed; left: 0; right: 0; bottom: 0; margin: 0; }
+.footer.pinned::after { content: ""; position: absolute; left: 0; right: 0; top: 100%; height: 12px;
+  background: linear-gradient(90deg, ${BLUE} 70%, ${GOLD} 70%); }`;
 
 export function baseCss(assets: Assets, layout: PdfLayout) {
   return `${assets.css}
@@ -147,14 +147,6 @@ html.paged { background: #fff; }
 .paged tr, .paged .stage-head, .paged .feature, .paged .how-steps, .paged .obra, .paged .pay, .paged .notes,
 .paged .valid, .paged .signs, .paged .kpis, .paged .party, .paged .bank, .paged .sum { break-inside: avoid; }
 .paged h2, .paged h3, .paged h4, .paged .head { break-after: avoid; }
-.flow thead { display: table-header-group; }
-.flow tr, .flow .stage-head, .flow .feature, .flow .how-steps, .flow .obra, .flow .pay, .flow .notes,
-.flow .valid, .flow .signs, .flow .kpis, .flow .party, .flow .bank, .flow .sum, .flow .footer,
-.flow .divider, .flow .clause p, .flow .invest, .flow .stats, .flow .steps, .flow .sign-block,
-.flow .split, .flow .box, .flow .parties, .flow .preamble, .flow .closing { break-inside: avoid; }
-.flow h2, .flow h3, .flow h4, .flow .head, .flow .eyebrow, .flow .lead, .flow .stage-head { break-after: avoid; }
-/* A faixa final fica junto do último bloco (nunca sozinha numa folha). */
-.flow .footer { break-before: avoid; }
 `;
 }
 

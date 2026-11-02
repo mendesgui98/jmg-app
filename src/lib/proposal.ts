@@ -49,7 +49,7 @@ export const DEFAULT_NOTES = [
   "Horário de execução conforme regulamento do condomínio, de segunda a sexta-feira.",
 ].join("\n");
 
-/** Formato do PDF: página única contínua (padrão) ou folhas A4 com quebra de página. */
+/** Formato do PDF: página única contínua (padrão) ou em folhas (blocos inteiros, folha do tamanho do conteúdo). */
 export type PdfLayout = "continuo" | "paginado";
 export const pdfLayout = (v: unknown): PdfLayout => (v === "paginado" ? "paginado" : "continuo");
 
