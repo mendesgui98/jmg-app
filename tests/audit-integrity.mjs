@@ -598,4 +598,78 @@ for (const [table, column] of [
     `${table}.${column} deve usar a data de Brasília`,
   );
 console.log("PASS: exact grants, anon without access and 2FA enforced by the database");
+// Custos fixos: geração das contas do mês (idempotente), recorrências, valor variável e acesso.
+await as(admin);
+const fc = async (o) =>
+  value(
+    `INSERT INTO public.fixed_costs(name,category,amount,recurrence,due_day,due_month,variable,starts_on)
+     VALUES($1,$2,$3,$4,$5,$6,$7,'2026-01-01') RETURNING id`,
+    [
+      o.name,
+      o.category ?? "outros",
+      o.amount,
+      o.recurrence ?? "mensal",
+      o.day ?? 10,
+      o.month ?? null,
+      !!o.variable,
+    ],
+  );
+await fc({ name: "Aluguel", category: "ocupacao", amount: 3800, day: 31 });
+await fc({ name: "IPTU", amount: 2400, recurrence: "anual", month: 3 });
+await fc({ name: "Seguro", amount: 900, recurrence: "trimestral", month: 2 });
+const luz = await fc({ name: "Luz", category: "utilidades", amount: 1000, variable: true });
+assert.equal(await value("SELECT public.generate_fixed_cost_entries('2026-09-01')"), 2); // aluguel e luz
+assert.equal(await value("SELECT public.generate_fixed_cost_entries('2026-10-01')"), 2);
+for (const [ym, paid] of [
+  ["2026-09", 300],
+  ["2026-10", 500],
+])
+  await db.query(
+    "INSERT INTO public.financial_settlements(entry_id,account_id,amount,paid_date) SELECT id,$3,$2,due_date FROM public.financial_entries WHERE fixed_cost_id=$1 AND competence=$4",
+    [luz, paid, c6, ym],
+  );
+// Novembro: aluguel, seguro (trimestral desde fevereiro) e luz pela média das pagas; IPTU só em março.
+assert.equal(await value("SELECT public.generate_fixed_cost_entries('2026-11-15')"), 3);
+assert.equal(
+  await value("SELECT public.generate_fixed_cost_entries('2026-11-01')"),
+  0,
+  "Não duplica",
+);
+assert.equal(
+  await value(
+    "SELECT amount::float FROM public.financial_entries WHERE fixed_cost_id=$1 AND competence='2026-11'",
+    [luz],
+  ),
+  400,
+);
+assert.equal(
+  await value(
+    "SELECT due_date::text FROM public.financial_entries e JOIN public.fixed_costs c ON c.id=e.fixed_cost_id WHERE c.name='Aluguel' AND competence='2026-11'",
+  ),
+  "2026-11-30",
+  "Dia 31 vira o último dia do mês",
+);
+assert.equal(
+  await value(
+    "SELECT count(*)::int FROM public.financial_entries WHERE category='Custo fixo' AND work_id IS NULL AND direction='saida'",
+  ),
+  7,
+);
+assert.equal(
+  await value("SELECT public.generate_fixed_cost_entries('2027-03-01')"),
+  3,
+  "Março: aluguel, luz e IPTU (seguro só em fev/mai/ago/nov)",
+);
+await as(team);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.fixed_costs"),
+  0,
+  "Equipe não vê custos fixos",
+);
+await rejects("SELECT public.generate_fixed_cost_entries('2026-12-01')", [], /permissão/);
+await rejects("DELETE FROM public.fixed_costs", [], /permission denied/);
+await db.exec("RESET ROLE");
+console.log(
+  "PASS: fixed costs generate monthly payables (recurrence, variable average, idempotent, admin only)",
+);
 await db.close();

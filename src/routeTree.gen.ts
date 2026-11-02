@@ -17,6 +17,7 @@ import { Route as AuthenticatedCadastrosRouteImport } from './routes/_authentica
 import { Route as AuthenticatedConfiguracoesRouteImport } from './routes/_authenticated/configuracoes'
 import { Route as AuthenticatedContratosRouteImport } from './routes/_authenticated/contratos'
 import { Route as AuthenticatedDashboardRouteImport } from './routes/_authenticated/dashboard'
+import { Route as AuthenticatedEstruturaRouteImport } from './routes/_authenticated/estrutura'
 import { Route as AuthenticatedEtapasRouteImport } from './routes/_authenticated/etapas'
 import { Route as AuthenticatedFinanceiroRouteImport } from './routes/_authenticated/financeiro'
 import { Route as AuthenticatedMateriaisRouteImport } from './routes/_authenticated/materiais'
@@ -78,6 +79,11 @@ const AuthenticatedContratosRoute = AuthenticatedContratosRouteImport.update({
 const AuthenticatedDashboardRoute = AuthenticatedDashboardRouteImport.update({
   id: '/dashboard',
   path: '/dashboard',
+  getParentRoute: () => AuthenticatedRouteRoute,
+} as any)
+const AuthenticatedEstruturaRoute = AuthenticatedEstruturaRouteImport.update({
+  id: '/estrutura',
+  path: '/estrutura',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
 const AuthenticatedEtapasRoute = AuthenticatedEtapasRouteImport.update({
@@ -213,6 +219,7 @@ export interface FileRoutesByFullPath {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contratos': typeof AuthenticatedContratosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/estrutura': typeof AuthenticatedEstruturaRoute
   '/etapas': typeof AuthenticatedEtapasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
@@ -244,6 +251,7 @@ export interface FileRoutesByTo {
   '/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/contratos': typeof AuthenticatedContratosRoute
   '/dashboard': typeof AuthenticatedDashboardRoute
+  '/estrutura': typeof AuthenticatedEstruturaRoute
   '/etapas': typeof AuthenticatedEtapasRoute
   '/financeiro': typeof AuthenticatedFinanceiroRoute
   '/materiais': typeof AuthenticatedMateriaisRoute
@@ -277,6 +285,7 @@ export interface FileRoutesById {
   '/_authenticated/configuracoes': typeof AuthenticatedConfiguracoesRoute
   '/_authenticated/contratos': typeof AuthenticatedContratosRoute
   '/_authenticated/dashboard': typeof AuthenticatedDashboardRoute
+  '/_authenticated/estrutura': typeof AuthenticatedEstruturaRoute
   '/_authenticated/etapas': typeof AuthenticatedEtapasRoute
   '/_authenticated/financeiro': typeof AuthenticatedFinanceiroRoute
   '/_authenticated/materiais': typeof AuthenticatedMateriaisRoute
@@ -310,6 +319,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contratos'
     | '/dashboard'
+    | '/estrutura'
     | '/etapas'
     | '/financeiro'
     | '/materiais'
@@ -341,6 +351,7 @@ export interface FileRouteTypes {
     | '/configuracoes'
     | '/contratos'
     | '/dashboard'
+    | '/estrutura'
     | '/etapas'
     | '/financeiro'
     | '/materiais'
@@ -373,6 +384,7 @@ export interface FileRouteTypes {
     | '/_authenticated/configuracoes'
     | '/_authenticated/contratos'
     | '/_authenticated/dashboard'
+    | '/_authenticated/estrutura'
     | '/_authenticated/etapas'
     | '/_authenticated/financeiro'
     | '/_authenticated/materiais'
@@ -460,6 +472,13 @@ declare module '@tanstack/react-router' {
       path: '/dashboard'
       fullPath: '/dashboard'
       preLoaderRoute: typeof AuthenticatedDashboardRouteImport
+      parentRoute: typeof AuthenticatedRouteRoute
+    }
+    '/_authenticated/estrutura': {
+      id: '/_authenticated/estrutura'
+      path: '/estrutura'
+      fullPath: '/estrutura'
+      preLoaderRoute: typeof AuthenticatedEstruturaRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
     '/_authenticated/etapas': {
@@ -624,6 +643,7 @@ interface AuthenticatedRouteRouteChildren {
   AuthenticatedConfiguracoesRoute: typeof AuthenticatedConfiguracoesRoute
   AuthenticatedContratosRoute: typeof AuthenticatedContratosRoute
   AuthenticatedDashboardRoute: typeof AuthenticatedDashboardRoute
+  AuthenticatedEstruturaRoute: typeof AuthenticatedEstruturaRoute
   AuthenticatedEtapasRoute: typeof AuthenticatedEtapasRoute
   AuthenticatedFinanceiroRoute: typeof AuthenticatedFinanceiroRoute
   AuthenticatedMateriaisRoute: typeof AuthenticatedMateriaisRoute
@@ -653,6 +673,7 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
   AuthenticatedConfiguracoesRoute: AuthenticatedConfiguracoesRoute,
   AuthenticatedContratosRoute: AuthenticatedContratosRoute,
   AuthenticatedDashboardRoute: AuthenticatedDashboardRoute,
+  AuthenticatedEstruturaRoute: AuthenticatedEstruturaRoute,
   AuthenticatedEtapasRoute: AuthenticatedEtapasRoute,
   AuthenticatedFinanceiroRoute: AuthenticatedFinanceiroRoute,
   AuthenticatedMateriaisRoute: AuthenticatedMateriaisRoute,

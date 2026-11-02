@@ -2,6 +2,8 @@ import { businessDate } from "@/lib/dashboard-math";
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { planningOptions } from "@/lib/planning-data";
+import { useMe } from "@/hooks/use-me";
+import { WorkStructureChip } from "@/components/finance/structure";
 import { OWNER_LABEL, sortIssues, taskState, type OwnerKind } from "@/lib/planning";
 import { AlertTriangle, CircleAlert, ClipboardList, ListChecks } from "lucide-react";
 import { Badge, type BadgeProps } from "@/components/ui/badge";
@@ -32,6 +34,7 @@ export function WorkSituation({
   progress?: number;
   client?: string;
 }) {
+  const { data: me } = useMe();
   const p = progress ?? physicalProgress(stages);
   const today = businessDate();
   const scheduling = scheduleSituation(stages, today, work.planned_end);
@@ -108,6 +111,11 @@ export function WorkSituation({
         </div>
       </div>
       <ScheduleSituation workId={work.id} stages={stages} end={work.planned_end} />
+      {me?.canSeeCosts && (
+        <div>
+          <WorkStructureChip workId={work.id} />
+        </div>
+      )}
       {progress === undefined && (
         <div className={cn(panelClass, "space-y-2 p-4 sm:p-5")}>
           <div className="flex items-baseline justify-between gap-3">
