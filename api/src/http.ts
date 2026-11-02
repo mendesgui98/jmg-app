@@ -56,7 +56,11 @@ export class Router {
       pathMatched = true;
       if (route.method !== method) continue;
       const params: Record<string, string> = {};
-      route.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1] ?? "")));
+      try {
+        route.keys.forEach((k, i) => (params[k] = decodeURIComponent(m[i + 1] ?? "")));
+      } catch {
+        throw new HttpError(400, "bad_request", "Endereço inválido");
+      }
       return { handler: route.handler, params };
     }
     if (pathMatched) throw new HttpError(405, "method_not_allowed", "Método não permitido");

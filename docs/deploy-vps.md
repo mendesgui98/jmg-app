@@ -86,6 +86,12 @@ Repositório → **Settings → Secrets and variables → Actions**.
 | `VPS_USER`         | opcional, padrão `deploy`                         |
 | `VPS_PORT`         | opcional, padrão `22`                             |
 | `SIGNUP_ENABLED`   | opcional, padrão `false` (entrada só por convite) |
+| `VPS_KNOWN_HOSTS`  | recomendado: chave SSH da VPS fixada (ver abaixo) |
+
+`VPS_KNOWN_HOSTS`: na VPS, rode `ssh-keyscan -p 22 localhost | sed "s/^localhost/IP_DA_VPS/"`
+(troque `IP_DA_VPS` pelo valor de `VPS_HOST`; se a porta não for 22, use `[IP]:porta`) e cole a
+saída na variável. Com ela o deploy só aceita a chave verdadeira do servidor; sem ela o deploy
+confia na primeira chave que receber (e mostra um aviso).
 
 E-mail: crie uma caixa como `nao-responda@jmgreformas.com.br` (hPanel → E-mails) e use os dados
 SMTP dela. Sem SMTP o sistema funciona, mas convites e "esqueci a senha" não enviam e-mail.

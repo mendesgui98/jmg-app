@@ -10,6 +10,12 @@
 		X-Content-Type-Options "nosniff"
 		Referrer-Policy "strict-origin-when-cross-origin"
 		X-Frame-Options "DENY"
+		Permissions-Policy "camera=(self), microphone=(), geolocation=(), payment=(), usb=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		# CSP: só carrega código do próprio domínio e só conversa com a API (Supabase + /jmg).
+		# 'unsafe-inline' em script-src é exigido pelo SSR (dados de hidratação inline).
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' data: https://fonts.gstatic.com; img-src 'self' data: blob: https://{$API_DOMAIN}; connect-src 'self' https://{$API_DOMAIN} wss://{$API_DOMAIN}; frame-src 'self' blob:; worker-src 'self'; manifest-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'"
+		-Server
 	}
 	reverse_proxy web:3000
 }
@@ -17,6 +23,17 @@
 # API: /jmg/* vai para a API própria; o resto para o gateway do Supabase (auth, rest, storage)
 {$API_DOMAIN} {
 	encode zstd gzip
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		X-Frame-Options "DENY"
+		-Server
+		-X-Powered-By
+	}
+	# Arquivos enviados (bucket privado): nunca executam script, mesmo que alguém envie um HTML.
+	@objects path /storage/v1/object/*
+	header @objects Content-Security-Policy "script-src 'none'; object-src 'self'; base-uri 'none'; form-action 'none'"
 	handle_path /jmg/* {
 		reverse_proxy api:4000
 	}

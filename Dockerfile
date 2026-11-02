@@ -36,8 +36,8 @@ CMD ["node", "scripts/migrate.mjs"]
 FROM mcr.microsoft.com/playwright:v1.56.1-noble AS api
 WORKDIR /app/api
 ENV NODE_ENV=production PORT=4000
-COPY api/package.json ./package.json
-RUN npm install --omit=dev --no-audit --no-fund
+COPY api/package.json api/package-lock.json ./
+RUN npm ci --omit=dev --no-audit --no-fund
 COPY api/src ./src
 COPY api/assets ./assets
 # Módulos puros compartilhados com o app (preço, proposta, extenso, documentos, cláusulas).
