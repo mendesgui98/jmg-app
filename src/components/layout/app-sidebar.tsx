@@ -1,5 +1,6 @@
 import { Link, useLocation } from "@tanstack/react-router";
-import { Search } from "lucide-react";
+import { PanelLeftClose, PanelLeftOpen, Search } from "lucide-react";
+import { useSidebarCollapsed } from "@/hooks/use-sidebar-collapsed";
 import { useMe } from "@/hooks/use-me";
 import { isMac, openSearch } from "@/lib/command-palette";
 import { cn } from "@/lib/utils";
@@ -18,9 +19,12 @@ const NAV_CHIP: Record<NavColor, string> = {
 export function NavLink({
   item,
   onNavigate,
+  compact = false,
 }: {
   item: NavItem;
   onNavigate?: (() => void) | undefined;
+  /** Menu recolhido: só o ícone (o nome aparece ao passar o mouse). */
+  compact?: boolean;
 }) {
   const { pathname } = useLocation();
   const active = isActive(pathname, item.to);
@@ -29,8 +33,11 @@ export function NavLink({
       to={item.to}
       onClick={onNavigate}
       aria-current={active ? "page" : undefined}
+      title={compact ? item.label : undefined}
+      aria-label={compact ? item.label : undefined}
       className={cn(
         "group relative flex h-10 items-center gap-3 rounded-xl px-2 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-sidebar-ring",
+        compact && "justify-center px-0",
         active
           ? "bg-gradient-to-r from-hero to-hero-end font-semibold text-hero-foreground shadow-hero"
           : "text-sidebar-foreground hover:bg-sidebar-accent/70 hover:text-foreground",
@@ -44,25 +51,37 @@ export function NavLink({
       >
         <item.icon className="h-4 w-4" />
       </span>
-      {item.label}
-      {active && <span aria-hidden className="ml-auto mr-1 h-1.5 w-1.5 rounded-full bg-gold" />}
+      {!compact && item.label}
+      {active && !compact && (
+        <span aria-hidden className="ml-auto mr-1 h-1.5 w-1.5 rounded-full bg-gold" />
+      )}
     </Link>
   );
 }
 
 /** Lista de navegação agrupada (usada na barra lateral e no menu "Mais" do celular). */
-export function NavGroups({ onNavigate }: { onNavigate?: (() => void) | undefined }) {
+export function NavGroups({
+  onNavigate,
+  compact = false,
+}: {
+  onNavigate?: (() => void) | undefined;
+  compact?: boolean;
+}) {
   const { data: me } = useMe();
   return (
-    <nav className="space-y-5" aria-label="Navegação principal">
+    <nav className={compact ? "space-y-3" : "space-y-5"} aria-label="Navegação principal">
       {visibleGroups(!!me?.canSeeCosts).map((g) => (
         <div key={g.label}>
-          <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-primary/70">
-            {g.label}
-          </p>
+          {compact ? (
+            <hr className="mx-2 mb-2 border-sidebar-border" aria-hidden />
+          ) : (
+            <p className="mb-1.5 px-2.5 text-[11px] font-semibold uppercase tracking-wider text-sidebar-primary/70">
+              {g.label}
+            </p>
+          )}
           <div className="space-y-1">
             {g.items.map((item) => (
-              <NavLink key={item.to} item={item} onNavigate={onNavigate} />
+              <NavLink key={item.to} item={item} onNavigate={onNavigate} compact={compact} />
             ))}
           </div>
         </div>
@@ -91,20 +110,62 @@ export function SearchButton({ className }: { className?: string }) {
 }
 
 export function AppSidebar({ onSignOut }: { onSignOut: () => void }) {
+  const [collapsed, setCollapsed] = useSidebarCollapsed();
+  const Toggle = collapsed ? PanelLeftOpen : PanelLeftClose;
+  const toggle = (
+    <button
+      type="button"
+      onClick={() => setCollapsed(!collapsed)}
+      title={collapsed ? "Abrir menu" : "Recolher menu (tela cheia)"}
+      aria-label={collapsed ? "Abrir menu" : "Recolher menu"}
+      aria-expanded={!collapsed}
+      className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-sidebar-foreground transition-colors outline-none hover:bg-sidebar-accent/70 hover:text-foreground focus-visible:ring-2 focus-visible:ring-sidebar-ring"
+    >
+      <Toggle className="h-[18px] w-[18px]" />
+    </button>
+  );
   return (
-    <aside className="sticky top-0 hidden h-screen w-64 shrink-0 flex-col border-r border-sidebar-border bg-sidebar bg-gradient-to-b from-sidebar to-sidebar-end lg:flex">
-      <div className="px-4 pt-5 pb-4">
-        <Brand />
+    <aside
+      className={cn(
+        "sticky top-0 hidden h-screen shrink-0 flex-col border-r border-sidebar-border bg-sidebar bg-gradient-to-b from-sidebar to-sidebar-end transition-[width] duration-200 lg:flex",
+        collapsed ? "w-[72px]" : "w-64",
+      )}
+    >
+      <div
+        className={cn(
+          "flex items-center gap-2 pt-5 pb-4",
+          collapsed ? "flex-col px-2" : "justify-between px-4",
+        )}
+      >
+        <Brand compact={collapsed} />
+        {toggle}
       </div>
-      <div className="px-3 pb-4">
-        <SearchButton />
+      <div className={cn("pb-4", collapsed ? "flex justify-center px-2" : "px-3")}>
+        {collapsed ? (
+          <button
+            type="button"
+            onClick={openSearch}
+            title="Buscar"
+            aria-label="Buscar"
+            className="flex h-10 w-10 items-center justify-center rounded-xl border border-sidebar-border bg-card text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring"
+          >
+            <Search className="h-4 w-4" />
+          </button>
+        ) : (
+          <SearchButton />
+        )}
       </div>
-      <div className="flex-1 overflow-y-auto px-3 pb-4">
-        <NavGroups />
+      <div className={cn("flex-1 overflow-y-auto pb-4", collapsed ? "px-2" : "px-3")}>
+        <NavGroups compact={collapsed} />
       </div>
-      <div className="space-y-1 border-t border-sidebar-border p-3">
-        <NavLink item={SETTINGS_ITEM} />
-        <UserMenu onSignOut={onSignOut} full />
+      <div
+        className={cn(
+          "space-y-1 border-t border-sidebar-border p-3",
+          collapsed && "flex flex-col items-center px-2",
+        )}
+      >
+        <NavLink item={SETTINGS_ITEM} compact={collapsed} />
+        <UserMenu onSignOut={onSignOut} full={!collapsed} />
       </div>
     </aside>
   );
