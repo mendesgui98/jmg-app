@@ -796,6 +796,8 @@ export type Database = {
           installment_index: number;
           notes: string | null;
           payable_order_id: string | null;
+          fixed_cost_id: string | null;
+          competence: string | null;
           payment_method: string | null;
           person_id: string | null;
           purchase_order_id: string | null;
@@ -823,6 +825,8 @@ export type Database = {
           installment_index?: number;
           notes?: string | null;
           payable_order_id?: string | null;
+          fixed_cost_id?: string | null;
+          competence?: string | null;
           payment_method?: string | null;
           person_id?: string | null;
           purchase_order_id?: string | null;
@@ -850,6 +854,8 @@ export type Database = {
           installment_index?: number;
           notes?: string | null;
           payable_order_id?: string | null;
+          fixed_cost_id?: string | null;
+          competence?: string | null;
           payment_method?: string | null;
           person_id?: string | null;
           purchase_order_id?: string | null;
@@ -899,6 +905,77 @@ export type Database = {
             columns: ["work_id"];
             isOneToOne: false;
             referencedRelation: "work_registry";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      fixed_costs: {
+        Row: {
+          active: boolean;
+          amount: number;
+          category: string;
+          created_at: string;
+          created_by: string | null;
+          due_day: number;
+          due_month: number | null;
+          ends_on: string | null;
+          id: string;
+          name: string;
+          notes: string | null;
+          payment_method: string | null;
+          recurrence: string;
+          starts_on: string;
+          supplier_id: string | null;
+          updated_at: string;
+          updated_by: string | null;
+          variable: boolean;
+        };
+        Insert: {
+          active?: boolean;
+          amount: number;
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          due_day?: number;
+          due_month?: number | null;
+          ends_on?: string | null;
+          id?: string;
+          name: string;
+          notes?: string | null;
+          payment_method?: string | null;
+          recurrence?: string;
+          starts_on?: string;
+          supplier_id?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+          variable?: boolean;
+        };
+        Update: {
+          active?: boolean;
+          amount?: number;
+          category?: string;
+          created_at?: string;
+          created_by?: string | null;
+          due_day?: number;
+          due_month?: number | null;
+          ends_on?: string | null;
+          id?: string;
+          name?: string;
+          notes?: string | null;
+          payment_method?: string | null;
+          recurrence?: string;
+          starts_on?: string;
+          supplier_id?: string | null;
+          updated_at?: string;
+          updated_by?: string | null;
+          variable?: boolean;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "fixed_costs_supplier_id_fkey";
+            columns: ["supplier_id"];
+            isOneToOne: false;
+            referencedRelation: "people";
             referencedColumns: ["id"];
           },
         ];
@@ -2577,6 +2654,7 @@ export type Database = {
       };
       undo_settlement: { Args: { _settlement_id: string }; Returns: undefined };
       delete_material: { Args: { _id: string }; Returns: undefined };
+      generate_fixed_cost_entries: { Args: { _month: string }; Returns: number };
       copy_budget: {
         Args: { _as_revision: boolean; _budget_id: string };
         Returns: string;

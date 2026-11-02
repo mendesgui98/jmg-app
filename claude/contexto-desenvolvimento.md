@@ -4,6 +4,20 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-02 — Custos fixos e Caixa da Estrutura (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** implementar a especificação "Caixa da Estrutura JMG" (artifact do Guilherme) igual ao mockup e subir para produção.
+
+**Decisões do Guilherme:** pró-labore entra como custo fixo; retroativo (todos os recebimentos já lançados contam); veículo/combustível por lançamento (com obra vai para a obra, sem obra sai da estrutura); a parte de estrutura de cada recebimento é proporcional ao orçamento (estrutura ÷ venda), não um % fixo sobre o recebido.
+
+**Como ficou:**
+
+- Migração `20261102000044_fixed_costs_structure.sql`: tabela `fixed_costs`, colunas `fixed_cost_id`/`competence` em `financial_entries` (único por custo e mês), função `generate_fixed_cost_entries` e categoria "Custo fixo". As contas do mês são contas a pagar comuns (aparecem também no Financeiro) — o mockup propunha tabelas próprias de lançamentos e anexos; aqui reaproveitamos baixas, contas e anexos que já existem.
+- Regras puras em `src/lib/structure.ts` (testes em `structure.test.ts`), dados em `structure-data.ts`, tela em `components/finance/structure.tsx` (Visão geral, Custos fixos, Obras × estrutura, Simulador), rota `/estrutura`, cartão no Painel e chip na obra.
+- Teste do banco cobre geração (mensal/trimestral/anual, dia 31, média do variável, sem duplicar) e acesso (equipe não vê nem gera).
+
+**Pendências:** a previsão usa só as parcelas já lançadas nas contas a receber (o saldo contratual ainda sem parcelas não entra); obras cadastradas direto, sem orçamento, não têm fração de estrutura.
+
 ### 2026-11-02 — Correção dos erros da revisão completa (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** corrigir todos os erros encontrados na revisão da plataforma (relatório "Revisão JMG Obras"); indicadores novos ficam para decidir depois.

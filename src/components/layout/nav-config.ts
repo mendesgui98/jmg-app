@@ -6,6 +6,7 @@ import {
   FileText,
   HardHat,
   LayoutDashboard,
+  Landmark,
   Layers,
   Package,
   Settings,
@@ -52,6 +53,7 @@ export const NAV_GROUPS: NavGroup[] = [
     label: "Gestão",
     items: [
       { to: "/financeiro", label: "Financeiro", icon: Wallet, costs: true, color: "blue" },
+      { to: "/estrutura", label: "Estrutura", icon: Landmark, costs: true, color: "blue" },
       { to: "/cadastros", label: "Cadastros", icon: Users, color: "blue" },
     ],
   },

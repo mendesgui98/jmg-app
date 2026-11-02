@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { targetMargin } from "@/lib/pricing";
+import { StructureHealthCard } from "@/components/finance/structure";
 import { Link, useLocation, useNavigate, useSearch } from "@tanstack/react-router";
 import {
   AlertTriangle,
@@ -1418,6 +1419,9 @@ export function HomeDashboard({
         <div className="grid grid-cols-1 gap-4 lg:grid-cols-3">
           <CashChartCard chart={chart} projection={projection} />
           <DelinquencyCard d={late} />
+        </div>
+        <div className="mt-4">
+          <StructureHealthCard />
         </div>
       </section>
 
