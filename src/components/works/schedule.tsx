@@ -20,7 +20,7 @@ import { stageStatus } from "@/lib/work-progress";
 import { uploadDocument } from "@/lib/work-data";
 import { useMe } from "@/hooks/use-me";
 import { useRecordFocus } from "@/hooks/use-record-focus";
-import { fmtDate, fmtNum } from "@/lib/format";
+import { fmtDate, fmtStamp, fmtNum } from "@/lib/format";
 import {
   AlertTriangle,
   Plus,
@@ -582,7 +582,7 @@ export function Schedule({
           {editing && (
             <>
               <p className="border-t pt-3 text-xs text-muted-foreground">
-                Atualizada em {fmtDate(editing.updated_at.slice(0, 10))} ·{" "}
+                Atualizada em {fmtStamp(editing.updated_at)} ·{" "}
                 {editing.updated_by === me?.id
                   ? me.name
                   : editing.responsible || "Autor registrado no histórico"}

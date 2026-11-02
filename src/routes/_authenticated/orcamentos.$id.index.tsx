@@ -24,7 +24,7 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { budgetApi, budgetFamilyOptions } from "@/lib/budget-api";
 import { budgetKey, loadBudget } from "@/lib/budget-data";
-import { computeBudget } from "@/lib/pricing";
+import { computeBudget, marginBaseLabel } from "@/lib/pricing";
 import { STATUS_LABEL, approvedVersion, isLockedStatus, openRevision } from "@/lib/budget-status";
 import { Approval } from "@/components/works/approval";
 import { Attachment } from "@/components/works/fields";
@@ -323,11 +323,17 @@ function Editor() {
           value={<Money value={result.result} />}
         />
         <KpiCard
-          label="Margem sobre a venda"
+          label={`Margem ${marginBaseLabel(data.params)}`}
           icon={Percent}
           tone={result.belowMin ? "negative" : result.belowDesired ? "alert" : "positive"}
           value={<span className="num">{fmtPct(result.margin)}</span>}
-          hint={result.belowMin ? "Abaixo da margem mínima" : "Não aparece para o cliente"}
+          hint={
+            result.belowMin
+              ? "Abaixo da margem mínima"
+              : result.saleNet > 0 && marginBaseLabel(data.params) !== "sobre a venda"
+                ? `Sobre o total da venda: ${fmtPct(result.result / result.saleNet)} · não aparece para o cliente`
+                : "Não aparece para o cliente"
+          }
           className="col-span-2 sm:col-span-1"
         />
       </div>
@@ -389,7 +395,7 @@ function Editor() {
         <Notice className="mb-6">Para gerar o PDF: {proposalIssues(proposal).join(" ")}</Notice>
       )}
 
-      <div className="grid gap-6 xl:grid-cols-[1fr_380px]">
+      <div className="grid grid-cols-1 gap-6 xl:grid-cols-[1fr_380px]">
         <Tabs defaultValue="itens" className="min-w-0">
           <TabsList>
             <TabsTrigger value="itens">Serviços</TabsTrigger>

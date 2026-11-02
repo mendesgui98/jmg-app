@@ -9,6 +9,7 @@ import { IconBubble } from "@/components/kpi";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Field, Memo, selectClass } from "./fields";
 import { text, number } from "@/lib/form-values";
+import { clearDraft } from "@/lib/clear-draft";
 import { DraftForm } from "./draft-form";
 import { localDate } from "@/lib/dashboard-math";
 import { openingPosition } from "@/lib/work-opening";
@@ -111,6 +112,7 @@ export function NewWork() {
       setOpen(false);
       setMode("");
       setRequest(crypto.randomUUID());
+      await clearDraft(`new-work-${mode}`);
       toast.success("Obra cadastrada.");
       await navigate({ to: "/obras/$id", params: { id } });
     } catch (e) {

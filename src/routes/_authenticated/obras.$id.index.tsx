@@ -28,6 +28,7 @@ import { BudgetVsActual } from "@/components/works/budget-vs-actual";
 import { StagePhotos } from "@/components/works/photos";
 import { WorkSituation } from "@/components/works/situation";
 import { WorkResult } from "@/components/works/result";
+import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
 export const Route = createFileRoute("/_authenticated/obras/$id/")({
   validateSearch: (
     s: Record<string, unknown>,
@@ -123,7 +124,7 @@ function Work() {
       </Link>
       <PageHeader
         title={w.name}
-        subtitle={`${w.origin === "direto" ? "CADASTRO DIRETO" : "ORÇAMENTO"} · ${w.status.toUpperCase()} · ${w.address || "Endereço não informado"}`}
+        subtitle={`${w.origin === "direto" ? "Cadastro direto" : "Do orçamento"} · ${workStatusLabel(w.status)} · ${w.address || "Endereço não informado"}`}
         actions={
           <>
             {w.linked_budget_id && me?.canSeeCosts && (
@@ -161,7 +162,7 @@ function Work() {
         }
       >
         <TabsList className="mb-5 flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="resumo">Visão Geral</TabsTrigger>
+          <TabsTrigger value="resumo">Visão geral</TabsTrigger>
           <TabsTrigger value="etapas">Etapas</TabsTrigger>
           <TabsTrigger value="checklist">Checklist</TabsTrigger>
           {me?.canSeeCosts && <TabsTrigger value="financeiro">Financeiro</TabsTrigger>}

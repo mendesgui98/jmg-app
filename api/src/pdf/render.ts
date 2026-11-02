@@ -42,14 +42,17 @@ export function lockDocument(html: string) {
 const MAX_RENDERS = 3;
 let running = 0;
 const waiting: (() => void)[] = [];
-async function slot<T>(work: () => Promise<T>): Promise<T> {
+// A vaga passa direto de quem termina para o próximo da fila (sem `running--`/`running++` no
+// meio), senão um pedido novo podia entrar nesse intervalo e passar de 3.
+export async function slot<T>(work: () => Promise<T>): Promise<T> {
   if (running >= MAX_RENDERS) await new Promise<void>((r) => waiting.push(r));
-  running++;
+  else running++;
   try {
     return await work();
   } finally {
-    running--;
-    waiting.shift()?.();
+    const next = waiting.shift();
+    if (next) next();
+    else running--;
   }
 }
 

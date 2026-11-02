@@ -70,6 +70,14 @@ describe("R2-2 funil comercial", () => {
       { reason: "Não informado", count: 1 },
     ]);
   });
+  it("reabrir um aprovado para edição não tira a obra dos aprovados", () => {
+    const f = commercialFunnel([
+      b(7, 0, "aprovado", 500, { approval_date: "2026-10-05" }),
+      b(7, 1, "elaboracao", 520),
+    ]);
+    expect(f.stages.find((s) => s.stage === "aprovado")).toMatchObject({ count: 1, value: 500 });
+    expect(f.openValue).toBe(0);
+  });
   it("sem decisões não inventa conversão", () => {
     expect(commercialFunnel([b(1, 0, "enviado", 10)]).conversion).toBeNull();
   });

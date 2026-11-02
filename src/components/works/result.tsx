@@ -23,6 +23,7 @@ export function WorkResult({ workId, budgetId }: { workId: string; budgetId: str
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [savingEstimate, setSavingEstimate] = useState(false);
   const { data: f } = useQuery(financeOptions);
   const { data: dash } = useQuery(dashboardOptions);
   const { data, error } = useQuery({
@@ -71,9 +72,17 @@ export function WorkResult({ workId, budgetId }: { workId: string; budgetId: str
     }
   }
   async function estimate(d: FormData) {
+    // Campo vazio não é "falta R$ 0": sem valor, a estimativa não é conferida.
+    if (!text(d, "amount").trim()) {
+      toast.error("Informe quanto ainda falta gastar para concluir (digite 0 se não falta nada).");
+      return;
+    }
+    if (savingEstimate) return;
+    setSavingEstimate(true);
     const r = await supabase
       .from("work_estimates")
       .upsert({ work_id: workId, additional_cost: number(d, "amount"), notes: text(d, "notes") });
+    setSavingEstimate(false);
     if (r.error) toast.error(r.error.message);
     else {
       refresh();
@@ -180,7 +189,7 @@ export function WorkResult({ workId, budgetId }: { workId: string; budgetId: str
           />
         ))}
         <KpiCard
-          label="Margem projetada"
+          label="Margem projetada (sobre a venda)"
           tone={!budgetId && !r.estimateConfirmed ? "neutral" : sign(r.result)}
           value={
             !budgetId && !r.estimateConfirmed ? (
@@ -215,7 +224,7 @@ export function WorkResult({ workId, budgetId }: { workId: string; budgetId: str
           label="Itens ainda não contemplados nos compromissos"
           value={data.estimate?.notes}
         />
-        <Button type="submit" variant="outline">
+        <Button type="submit" variant="outline" disabled={savingEstimate}>
           Salvar estimativa
         </Button>
       </form>

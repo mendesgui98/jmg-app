@@ -2,7 +2,7 @@ import { Image as ImageIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import type { Database } from "@/integrations/supabase/types";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
@@ -65,7 +65,7 @@ export function StagePhotos({
             </h3>
             <p className="text-xs text-muted-foreground">
               {fmtDate(r.record_date)} · {r.responsible || "Sem responsável"} · Atualização{" "}
-              {fmtDate(r.updated_at.slice(0, 10))}
+              {fmtStamp(r.updated_at)}
             </p>
             {r.file_path && <WorkPhoto path={r.file_path} caption={r.caption} />}
           </article>

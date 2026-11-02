@@ -1,7 +1,7 @@
 export const stageLabels: Record<string, string> = {
-  nao_iniciado: "Não iniciado",
+  nao_iniciado: "Não iniciada",
   andamento: "Em andamento",
-  pausado: "Pausado",
-  concluido: "Concluído",
-  atrasado: "Atrasado",
+  pausado: "Pausada",
+  concluido: "Concluída",
+  atrasado: "Atrasada",
 };

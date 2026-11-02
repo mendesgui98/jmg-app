@@ -17,7 +17,7 @@ import {
 } from "@/lib/planning";
 import type { PlanningData, WorkIssue } from "@/lib/planning-data";
 import { mergeSearch, type IssuesSearch } from "@/lib/planning-search";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { KpiCard, Segmented } from "@/components/kpi";
@@ -218,7 +218,7 @@ export function IssuesBoard({
                   )}
                   {i.status === "resolvida" && (
                     <span>
-                      Resolvida {i.resolved_at ? fmtDate(i.resolved_at.slice(0, 10)) : ""}
+                      Resolvida {i.resolved_at ? fmtStamp(i.resolved_at) : ""}
                       {i.resolution ? ` · ${i.resolution}` : ""}
                     </span>
                   )}

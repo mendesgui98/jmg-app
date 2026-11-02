@@ -22,6 +22,7 @@ import {
   accountStatus,
   cashMovements,
   cashSummary,
+  cents,
   type AccountStatus,
 } from "@/lib/operations";
 import { fmtBRL, fmtDate } from "@/lib/format";
@@ -35,6 +36,7 @@ import { financeOptions } from "@/lib/finance-data";
 import { dashboardOptions } from "@/lib/dashboard-data";
 import { paymentStages, stageDescription } from "@/lib/payment-stages";
 import { Installments } from "./installments";
+import { clearDraft } from "@/lib/clear-draft";
 import { DraftForm } from "./draft-form";
 import { useRecordFocus } from "@/hooks/use-record-focus";
 import { Link } from "@tanstack/react-router";
@@ -267,8 +269,14 @@ export function Finance({ workId }: { workId?: string }) {
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [novo]);
+  // Mesmo escopo para guardar e apagar o rascunho (entrada e saída separadas; baixa por conta).
+  const draftScope = `finance-${workId || "general"}-${dialog}${
+    dialog === "cash" || dialog === "entry" ? `-${entryDirection}` : ""
+  }${dialog === "settle" && entry ? `-${entry.id}` : ""}`;
   async function save(d: FormData) {
     setBusy(true);
+    // Dinheiro sempre em centavos: "666.6700000000001" era recusado pelo banco.
+    const money = (k: string) => cents(number(d, k));
     try {
       let r: { error: { message: string } | null };
       let receiptFor: string | null = null;
@@ -278,7 +286,7 @@ export function Finance({ workId }: { workId?: string }) {
           _direction: entryDirection,
           _movement_date: text(d, "date"),
           _description: text(d, "description"),
-          _amount: number(d, "amount"),
+          _amount: money("amount"),
           _category: text(d, "category"),
           _payment_method: text(d, "method"),
           _account_id: text(d, "account"),
@@ -295,7 +303,7 @@ export function Finance({ workId }: { workId?: string }) {
           _description: text(d, "description"),
           _person_id: text(d, "person") || "00000000-0000-0000-0000-000000000000",
           _direction: entryDirection,
-          _total: number(d, "amount"),
+          _total: money("amount"),
           _rows: JSON.parse(text(d, "installments") || "[]"),
           _incurred: d.get("incurred") === "on",
           _payment_method: text(d, "method"),
@@ -311,7 +319,7 @@ export function Finance({ workId }: { workId?: string }) {
           .insert({
             entry_id: entry.id,
             account_id: text(d, "account"),
-            amount: number(d, "amount"),
+            amount: money("amount"),
             paid_date: text(d, "date"),
             file_path: path,
             payment_method: text(d, "method"),
@@ -325,7 +333,7 @@ export function Finance({ workId }: { workId?: string }) {
         r = await supabase.from("account_transfers").insert({
           from_account_id: text(d, "from"),
           to_account_id: text(d, "to"),
-          amount: number(d, "amount"),
+          amount: money("amount"),
           transfer_date: text(d, "date"),
           description: text(d, "description"),
         });
@@ -333,7 +341,7 @@ export function Finance({ workId }: { workId?: string }) {
         r = await supabase.from("expense_allocations").insert({
           entry_id: entry.id,
           work_id: text(d, "work"),
-          amount: number(d, "amount"),
+          amount: money("amount"),
           rule: text(d, "rule"),
         });
       } else throw Error("Selecione um lançamento.");
@@ -356,9 +364,7 @@ export function Finance({ workId }: { workId?: string }) {
           .maybeSingle();
         receiptFor = st.data?.id ?? null;
       }
-      const { data: u } = await supabase.auth.getUser();
-      if (u.user)
-        localStorage.removeItem(`jmg-draft:${u.user.id}:finance-${workId || "general"}-${dialog}`);
+      await clearDraft(draftScope);
       setRequestId(crypto.randomUUID());
       setDialog("");
       setEntry(null);
@@ -1071,7 +1077,7 @@ export function Finance({ workId }: { workId?: string }) {
           </DialogHeader>
           <DraftForm
             key={`${dialog}-${entryDirection}-${entry?.id ?? ""}`}
-            scope={`finance-${workId || "general"}-${dialog}${dialog === "cash" || dialog === "entry" ? `-${entryDirection}` : ""}`}
+            scope={draftScope}
             className="space-y-3"
             onSubmit={(e) => {
               e.preventDefault();

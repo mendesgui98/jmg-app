@@ -134,7 +134,14 @@ export function weekAgenda(
   const money = (kind: AgendaKind, r: CompositionRow): AgendaItem => ({
     ...at(r.date!),
     kind,
-    title: r.installment || r.description || (kind === "entrada" ? "Receber" : "Pagar"),
+    // Nome do lançamento; a parcela ("2/4") só quando há mais de uma.
+    title:
+      [
+        r.description,
+        r.installment && !/^1\/1$/.test(r.installment) ? `parcela ${r.installment}` : "",
+      ]
+        .filter(Boolean)
+        .join(" · ") || (kind === "entrada" ? "Receber" : "Pagar"),
     detail: [r.work, r.client].filter(Boolean).join(" · "),
     amount: r2(abs(r)),
     workId: r.workId,

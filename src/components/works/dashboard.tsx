@@ -26,6 +26,7 @@ import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
 import { Money } from "@/components/kpi";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
+import { workStatusLabel } from "@/lib/work-status";
 const chartColors = {
   received: "var(--positive)",
   spent: "var(--negative)",
@@ -499,7 +500,7 @@ export function FinancialDashboard() {
                 {s.work.is_pilot ? " · PILOTO — TESTE" : ""}
               </Link>
               <p className="mt-1 text-xs text-muted-foreground">
-                {s.client} · {s.work.address} · {s.work.status}
+                {s.client} · {s.work.address} · {workStatusLabel(s.work.status)}
               </p>
               <p className="text-xs text-muted-foreground">
                 {fmtDate(s.work.actual_start || s.work.planned_start)} →{" "}

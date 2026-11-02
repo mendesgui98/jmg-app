@@ -10,6 +10,7 @@ import {
   cashSummary,
   stageCosts,
   costVariance,
+  earnedVariance,
   unassignedStageSpent,
   budgetStageServices,
   type AccountEntry,
@@ -161,6 +162,17 @@ describe("caixa e contas a receber/pagar (critérios de aceite)", () => {
     expect(cashSummary([pagar], paid, today).current).toBe(-80);
   });
 
+  it("pendente em centavos: R$ 1.000 com R$ 333,33 pagos falta R$ 666,67 (não 666,6700000000001)", () => {
+    const conta = { ...pagar, id: "mil", amount: 1000 };
+    expect(accountStatus(conta, [s("mil", 333.33)], today).pending).toBe(666.67);
+  });
+
+  it("quitada em duas baixas fica PAGA, sem resto de arredondamento", () => {
+    const conta = { ...pagar, id: "q", amount: 1001.82 };
+    const r = accountStatus(conta, [s("q", 500), s("q", 501.82)], today);
+    expect(r).toMatchObject({ pending: 0, status: "paga" });
+  });
+
   it("pagamento parcial deixa a conta PARCIAL com o saldo restante", () => {
     const st = accountStatus(receber, [s("rec", 50)], today);
     expect(st).toMatchObject({ status: "parcial", pending: 150, paid: 50 });
@@ -302,6 +314,21 @@ describe("orçado × realizado", () => {
       variation: 0.25,
     }));
   it("sem orçado não inventa variação", () => expect(costVariance(0, 300).variation).toBeNull());
+  it("etapa não iniciada e sem gasto fica a executar, não −100%", () =>
+    expect(earnedVariance(5700, 0, 0)).toMatchObject({
+      earned: 0,
+      notStarted: true,
+      difference: 0,
+      variation: null,
+    }));
+  it("compara o gasto com o orçado do que já foi executado", () => {
+    // Revestimentos: R$ 5.700 orçados, 40% feitos (R$ 2.280) e R$ 3.000 gastos: +R$ 720.
+    const r = earnedVariance(5700, 40, 3000);
+    expect(r).toMatchObject({ earned: 2280, difference: 720, notStarted: false });
+    expect(r.variation).toBeCloseTo(720 / 2280);
+  });
+  it("gasto antes de começar a etapa aparece inteiro", () =>
+    expect(earnedVariance(5700, 0, 800)).toMatchObject({ difference: 800, variation: null }));
   it("soma só o que foi pago em saídas da obra sem etapa", () => {
     const base = {
       work_id: "w1",

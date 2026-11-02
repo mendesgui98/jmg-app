@@ -1,4 +1,4 @@
-import { financeTotals, type EntryLike, type SettlementLike } from "./operations";
+import { cents, financeTotals, remaining, type EntryLike, type SettlementLike } from "./operations";
 export type DatedEntry = EntryLike & { due_date: string };
 export type DatedSettlement = SettlementLike & { paid_date: string };
 export function businessDate(date = new Date()) {
@@ -41,8 +41,10 @@ export function entryState(
   settlements: SettlementLike[],
   today = businessDate(),
 ) {
-  const paid = settlements.filter((s) => s.entry_id === entry.id).reduce((t, s) => t + s.amount, 0);
-  const pending = Math.max(0, entry.amount - paid);
+  const paid = cents(
+    settlements.filter((s) => s.entry_id === entry.id).reduce((t, s) => t + s.amount, 0),
+  );
+  const pending = remaining(entry.amount, paid);
   return {
     paid,
     pending,

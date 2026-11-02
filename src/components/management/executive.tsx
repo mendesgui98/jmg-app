@@ -36,6 +36,11 @@ import { EmptyState, ListSkeleton, PageSkeleton } from "@/components/feedback";
 import { KpiCard, Money, Segmented, type Tone } from "@/components/kpi";
 import { panelClass, segmentClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
+import { WORK_STATUS_LABEL } from "@/lib/work-status";
+
+/** Situação da linha para a tela: nome da situação da obra ou a palavra com inicial maiúscula. */
+const statusText = (s: string) =>
+  WORK_STATUS_LABEL[s] ?? (s ? s.charAt(0).toUpperCase() + s.slice(1) : "—");
 /** Ordem = prioridade no celular; `tone`/`filled`/`span` só definem a aparência do card. */
 const indicators: {
   id: Indicator;
@@ -162,10 +167,10 @@ export function ManagementFilters({
             className={selectClass}
           >
             <option value="">Todos os status</option>
-            <option value="contratacao">Em planejamento</option>
+            <option value="contratacao">Em contratação</option>
             <option value="execucao">Em execução</option>
             <option value="pausada">Pausada</option>
-            <option value="concluida">Finalizada</option>
+            <option value="concluida">Concluída</option>
           </select>
         </label>
       </div>
@@ -299,7 +304,7 @@ export function CompositionTable({
                 )}
               </td>
               <td className="p-3 text-xs">
-                {r.status}
+                {statusText(r.status)}
                 {r.installment && (
                   <span className="block text-muted-foreground">Parcela {r.installment}</span>
                 )}
@@ -344,7 +349,7 @@ export function ExecutivePanel({ hero }: { hero: PanelHeroProps }) {
   const detail = indicators.find((x) => x.id === search.detail);
   const rows = detail ? compositions[detail.id] : [];
   const total = indicatorTotal(rows);
-  /** Ordem de exibição: em execução, planejamento, pausadas e finalizadas. */
+  /** Ordem de exibição: em execução, em contratação, pausadas e concluídas. */
   const order = ["execucao", "contratacao", "pausada", "concluida"];
   const cards = [...selectWorks(data.works, search)].sort(
     (a, b) => order.indexOf(a.work.status) - order.indexOf(b.work.status),

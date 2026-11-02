@@ -13,6 +13,9 @@ describe("campo de moeda", () => {
     expect(plain(maskBRL("1000000"))).toBe("R$ 10.000,00");
     expect(plain(maskBRL("R$ 10.000,005"))).toBe("R$ 100.000,05");
     expect(maskBRL("R$ ")).toBe("");
+    // Backspace a partir de "R$ 0,05" esvazia o campo em vez de travar em "R$ 0,00".
+    expect(maskBRL("R$ 0,0")).toBe("");
+    expect(maskBRL("R$ 0,00")).toBe("");
   });
   it("valor zero começa vazio", () => {
     expect(moneyText(0)).toBe("");

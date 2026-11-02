@@ -42,7 +42,13 @@ type Entry = Database["public"]["Tables"]["financial_entries"]["Row"];
 type Settlement = Database["public"]["Tables"]["financial_settlements"]["Row"];
 export type ExecutiveData = {
   works: WorkSummary[];
-  finance: { entries: Entry[]; settlements: Settlement[]; people: { id: string; name: string }[] };
+  finance: {
+    entries: Entry[];
+    settlements: Settlement[];
+    people: { id: string; name: string }[];
+    /** Contas da empresa: o saldo inicial delas entra no caixa da empresa (como no Financeiro). */
+    accounts?: { opening_balance: number }[];
+  };
 };
 export function selectWorks(works: WorkSummary[], filter: ExecutiveFilter) {
   return works.filter(
@@ -225,13 +231,55 @@ export function executiveComposition(
         status: e.direction === "entrada" ? "recebido" : "pago",
       });
   }
-  rows.cash = [
-    ...rows.received.map((r) => ({ ...r, description: `Entrada · ${r.description}` })),
-    ...rows.spent.map((r) => ({
-      ...r,
-      amount: -(r.amount ?? 0),
-      description: `Saída · ${r.description}`,
-    })),
-  ];
+  if (company) {
+    // Caixa da empresa = o dinheiro nas contas, igual ao Financeiro: saldo inicial das contas +
+    // todas as baixas (inclusive de obras-piloto ou na lixeira, porque o dinheiro se moveu).
+    // A posição inicial das obras é história da obra, não dinheiro nas contas de hoje.
+    const opening = (data.finance.accounts ?? []).reduce(
+      (t, a) => t + Number(a.opening_balance),
+      0,
+    );
+    if (opening && !bounded)
+      rows.cash.push({
+        id: "accounts-opening",
+        workId: null,
+        personId: null,
+        work: "Geral JMG",
+        client: "—",
+        description: "Saldo inicial das contas da empresa",
+        date: null,
+        amount: opening,
+        status: "saldo inicial",
+        tab: "financeiro",
+      });
+    for (const e of data.finance.entries.filter((x) => !x.canceled))
+      for (const st of data.finance.settlements.filter(
+        (x) => x.entry_id === e.id && inPeriod(x.paid_date, range.from, range.to),
+      )) {
+        const w = data.works.find((x) => x.work.id === e.work_id);
+        rows.cash.push({
+          id: st.id,
+          workId: e.work_id,
+          personId: e.person_id,
+          work: w?.work.name || "Geral JMG",
+          client: data.finance.people.find((p) => p.id === e.person_id)?.name || w?.client || "—",
+          description: `${e.direction === "entrada" ? "Entrada" : "Saída"} · ${e.description}`,
+          date: st.paid_date,
+          amount: e.direction === "entrada" ? st.amount : -st.amount,
+          method: st.payment_method,
+          status: e.direction === "entrada" ? "recebido" : "pago",
+          entryId: e.id,
+          tab: "financeiro",
+        });
+      }
+  } else
+    rows.cash = [
+      ...rows.received.map((r) => ({ ...r, description: `Entrada · ${r.description}` })),
+      ...rows.spent.map((r) => ({
+        ...r,
+        amount: -(r.amount ?? 0),
+        description: `Saída · ${r.description}`,
+      })),
+    ];
   return rows;
 }

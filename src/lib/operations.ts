@@ -1,5 +1,10 @@
 import type { ItemMaterial } from "./pricing";
 import { materialPurchaseQty } from "./pricing";
+
+/** Valor em reais arredondado ao centavo (somas em ponto flutuante deixam resíduos como 1e-13). */
+export const cents = (n: number) => Math.round(n * 100) / 100;
+/** Quanto falta pagar/receber de uma conta, em centavos: nunca negativo nem resíduo de arredondamento. */
+export const remaining = (amount: number, paid: number) => Math.max(0, cents(amount - paid));
 export function materialKey(m: ItemMaterial) {
   return `${m.material_id || m.name}|${m.purchase_unit}|${m.supplied_by}`;
 }
@@ -65,7 +70,7 @@ export function financeTotals(entries: EntryLike[], settlements: SettlementLike[
   const sum = (direction: string, actual: boolean) =>
     active
       .filter((e) => e.direction === direction)
-      .reduce((t, e) => t + (actual ? paid(e) : Math.max(0, e.amount - paid(e))), 0);
+      .reduce((t, e) => t + (actual ? paid(e) : remaining(e.amount, paid(e))), 0);
   const received = sum("entrada", true),
     spent = sum("saida", true);
   return {
@@ -150,8 +155,10 @@ const addDays = (date: string, days: number) => {
 
 /** Situação de uma conta a receber/pagar e o destaque de vencimento (até 3 dias). */
 export function accountStatus(entry: AccountEntry, settlements: SettlementLike[], today: string) {
-  const paid = settlements.filter((s) => s.entry_id === entry.id).reduce((t, s) => t + s.amount, 0);
-  const pending = entry.canceled ? 0 : Math.max(0, entry.amount - paid);
+  const paid = cents(
+    settlements.filter((s) => s.entry_id === entry.id).reduce((t, s) => t + s.amount, 0),
+  );
+  const pending = entry.canceled ? 0 : remaining(entry.amount, paid);
   const status: AccountStatus = entry.canceled
     ? "cancelada"
     : pending <= 0
@@ -260,7 +267,7 @@ export function stageCosts(
     if (e.category === "Mão de obra") laborSpent += paid;
     else if (e.category === "Materiais") materialSpent += paid;
     else otherSpent += paid;
-    committed += Math.max(0, e.amount - paid);
+    committed += remaining(e.amount, paid);
   }
   const planned = laborPlanned + materialPlanned;
   const spent = laborSpent + materialSpent + otherSpent;
@@ -286,6 +293,28 @@ export function costVariance(planned: number, actual: number) {
   const p = Number(planned) || 0;
   const a = Number(actual) || 0;
   return { planned: p, actual: a, difference: a - p, variation: p > 0 ? (a - p) / p : null };
+}
+
+/**
+ * Orçado × realizado pelo avanço: compara o gasto com o orçado do que já foi executado
+ * (orçado × avanço da etapa), não com o orçado inteiro. Etapa ainda não iniciada e sem gasto
+ * fica "a executar" (sem diferença), em vez de aparecer como −100%.
+ */
+export function earnedVariance(planned: number, progress: number, actual: number) {
+  const p = Number(planned) || 0;
+  const a = Number(actual) || 0;
+  const pct = Math.min(100, Math.max(0, Number(progress) || 0));
+  const earned = cents((p * pct) / 100);
+  const notStarted = pct === 0 && a === 0;
+  return {
+    planned: p,
+    progress: pct,
+    earned,
+    actual: a,
+    notStarted,
+    difference: notStarted ? 0 : cents(a - earned),
+    variation: notStarted || earned <= 0 ? null : (a - earned) / earned,
+  };
 }
 
 /** Gasto pago (baixas) das saídas da obra sem etapa vinculada. */

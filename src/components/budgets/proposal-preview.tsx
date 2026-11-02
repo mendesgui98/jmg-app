@@ -35,6 +35,11 @@ function Preview({ budgetId, onClose }: { budgetId: string; onClose: () => void 
       apiSend<{ html: string; issues: string[] }>("POST", `/v1/orcamentos/${budgetId}/previa`),
     retry: false,
     gcTime: 0,
+    // Gerar o documento é caro (e o contrato é registrado): só quando a pessoa pede "Atualizar",
+    // nunca ao voltar para a aba.
+    staleTime: Infinity,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
   return (
     <>

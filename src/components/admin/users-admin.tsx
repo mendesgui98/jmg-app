@@ -4,7 +4,7 @@ import { DatabaseBackup, MailPlus, ShieldCheck, User, Download } from "lucide-re
 import { toast } from "sonner";
 import { useMe, type Role } from "@/hooks/use-me";
 import { apiDownload, apiGet, apiSend } from "@/lib/api-client";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { selectClass } from "@/components/works/fields";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -153,7 +153,7 @@ export function UsersAdmin() {
                 <div className="break-all text-xs text-muted-foreground">
                   {u.email} ·{" "}
                   {u.last_sign_in_at
-                    ? `último acesso ${fmtDate(u.last_sign_in_at.slice(0, 10))}`
+                    ? `último acesso ${fmtStamp(u.last_sign_in_at)}`
                     : u.invited_at && !u.confirmed
                       ? "convite pendente"
                       : "nunca acessou"}

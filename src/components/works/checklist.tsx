@@ -17,7 +17,7 @@ import { stageLabels } from "@/lib/stage-labels";
 import { STAGE_STATUS_VARIANT } from "@/lib/status-badges";
 import { businessDate } from "@/lib/dashboard-math";
 import { commitOnEnter } from "@/lib/enter-submit";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
@@ -206,7 +206,7 @@ function StageChecklist({
                 {item.checked && item.checked_at && (
                   <p className="mt-0.5 text-xs text-positive">
                     Conferido por {names[item.checked_by ?? ""] ?? "usuário"} em{" "}
-                    {fmtDate(item.checked_at.slice(0, 10))}
+                    {fmtStamp(item.checked_at)}
                   </p>
                 )}
                 <input

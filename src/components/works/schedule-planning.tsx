@@ -15,7 +15,7 @@ import { useWorkSheetProps } from "@/hooks/use-work-sheet-props";
 import { scheduleVersionsOptions } from "@/lib/work-data";
 import { snapshotStages, calendarDays, type ScheduleStage } from "@/lib/work-schedule";
 import { supabase } from "@/integrations/supabase/client";
-import { fmtDate } from "@/lib/format";
+import { fmtDate, fmtStamp } from "@/lib/format";
 import { useMe } from "@/hooks/use-me";
 export function SchedulePlanning({
   workId,
@@ -82,7 +82,7 @@ export function SchedulePlanning({
             <h2 className="text-base font-semibold">Planejamento da obra</h2>
             <p className="mt-0.5 text-xs text-muted-foreground">
               {base
-                ? `Original preservado em ${fmtDate(base.created_at.slice(0, 10))} · ${versions.length} versões`
+                ? `Original preservado em ${fmtStamp(base.created_at)} · ${versions.length} versões`
                 : "Planejamento em elaboração · original ainda não aprovado"}
             </p>
           </div>
@@ -124,7 +124,7 @@ export function SchedulePlanning({
           {versions.map((x) => (
             <option key={x.id} value={x.version}>
               {x.version === 1 ? "Cronograma Original" : `Reprogramação ${x.version - 1}`} ·{" "}
-              {fmtDate(x.created_at.slice(0, 10))}
+              {fmtStamp(x.created_at)}
             </option>
           ))}
         </select>
