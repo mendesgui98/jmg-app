@@ -4,6 +4,12 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-02 — Contínuo de volta + "Com quebra de página" sem cortes (branch `claude/hopeful-mccarthy-0fob9w`)
+
+**Pedido:** voltar o PDF contínuo como era (uma página), mantendo a opção em folhas, mas sem cortar etapas no meio (ex.: Limpeza dividida entre folhas) e sem espaços vazios; folhas podem ser "um A4 um pouco mais estendido".
+
+**Como ficou:** contínuo restaurado (uma página, faixa final presa ao pé; só os logos continuam menores). O modo em folhas agora é montado por `composeSheets` (api/src/pdf/render.ts): blocos inteiros por folha, folha estica até 1,3× um A4 para levar um bloco inteiro, cada folha do tamanho exato do conteúdo, títulos colados ao bloco seguinte, parcelas de pagamento juntas, nota do cronograma com o gráfico, última folha curta juntada/equilibrada. Cada folha é impressa separadamente com `@page` do tamanho dela e as folhas são unidas pelo pdf-lib (cabeçalho/rodapé carimbados como antes). Testado com orçamento de 9 etapas, orçamento pequeno, etapa com 45 serviços e contrato com 13 cláusulas.
+
 ### 2026-11-02 — PDFs leves para o celular (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** os PDFs gerados (orçamento, contrato, versões) estavam pesados, demoravam no celular, ficavam embaçados e fechavam sozinhos.
