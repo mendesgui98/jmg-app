@@ -10,6 +10,7 @@ import {
   Layers,
   Package,
   Settings,
+  ShieldCheck,
   Users,
   Wallet,
   Wrench,
@@ -47,6 +48,7 @@ export const NAV_GROUPS: NavGroup[] = [
       { to: "/cronogramas", label: "Cronogramas", icon: CalendarDays, color: "sky" },
       { to: "/planejamento", label: "Planejamento", icon: ListTodo, color: "sky" },
       { to: "/pendencias", label: "Pendências", icon: CircleAlert, color: "sky" },
+      { to: "/garantias", label: "Garantias", icon: ShieldCheck, color: "sky" },
     ],
   },
   {

@@ -13,6 +13,7 @@ import { useMe } from "@/hooks/use-me";
 import { PageHeader } from "@/components/page-header";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { WorkWarranty } from "@/components/warranty/work-warranty";
 import { WorkChecklist } from "@/components/works/checklist";
 import { Dialog, DialogContent, DialogTitle, DialogHeader } from "@/components/ui/dialog";
 import { Field, Memo, selectClass } from "@/components/works/fields";
@@ -33,7 +34,9 @@ export const Route = createFileRoute("/_authenticated/obras/$id/")({
   validateSearch: (
     s: Record<string, unknown>,
   ): { tab?: string; record?: string; entry?: string } => ({
-    tab: typeof s["tab"] === "string" ? s["tab"] : "resumo",
+    // A antiga aba Assistência virou a aba Garantia.
+    tab:
+      s["tab"] === "assistencia" ? "garantia" : typeof s["tab"] === "string" ? s["tab"] : "resumo",
     record: typeof s["record"] === "string" ? s["record"] : "",
     entry: typeof s["entry"] === "string" ? s["entry"] : "",
   }),
@@ -179,7 +182,7 @@ function Work() {
           {me?.canSeeCosts && <TabsTrigger value="contrato">Contrato</TabsTrigger>}
           <TabsTrigger value="diario">Diário</TabsTrigger>
           <TabsTrigger value="entrega">Entrega</TabsTrigger>
-          <TabsTrigger value="assistencia">Assistência</TabsTrigger>
+          <TabsTrigger value="garantia">Garantia</TabsTrigger>
           <TabsTrigger value="decisao">Decisões</TabsTrigger>
         </TabsList>
         <TabsContent value="resumo">
@@ -223,7 +226,10 @@ function Work() {
             work={w}
           />
         </TabsContent>
-        {["diario", "entrega", "assistencia", "decisao", "documento"].map((kind) => (
+        <TabsContent value="garantia">
+          <WorkWarranty workId={id} canSeeCosts={!!me?.canSeeCosts} focus={search.record} />
+        </TabsContent>
+        {["diario", "entrega", "decisao", "documento"].map((kind) => (
           <TabsContent key={kind} value={kind}>
             <Records workId={id} kind={kind} records={data.records} onChange={refresh} />
           </TabsContent>

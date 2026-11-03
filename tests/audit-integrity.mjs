@@ -672,4 +672,122 @@ await db.exec("RESET ROLE");
 console.log(
   "PASS: fixed costs generate monthly payables (recurrence, variable average, idempotent, admin only)",
 );
+// Garantia: obra antiga (avulsa) pela equipe, chamado, visitas resolvem pelo banco, etapa da
+// mesma obra, uma garantia por obra, apagar só admin, custo ligado ao chamado e anon sem acesso.
+await as(team);
+const legacy = await value(
+  "INSERT INTO public.warranties(name,address,start_date,end_date,term_months) VALUES('  Casa Antiga ',' Rua 1 ','2026-01-10','2027-01-10',12) RETURNING id",
+);
+assert.equal(
+  await value("SELECT name FROM public.warranties WHERE id=$1", [legacy]),
+  "Casa Antiga",
+);
+await rejects(
+  "INSERT INTO public.warranties(start_date,end_date) VALUES('2026-01-10','2027-01-10')",
+  [],
+  /check constraint/i,
+);
+await rejects(
+  "INSERT INTO public.warranties(name,start_date,end_date) VALUES('X','2026-01-10','2026-01-10')",
+  [],
+  /check constraint/i,
+);
+const claim = await value(
+  "INSERT INTO public.warranty_claims(warranty_id,description,resolved_at) VALUES($1,'Vazamento','2026-02-01') RETURNING id",
+  [legacy],
+);
+assert.equal(
+  await value("SELECT resolved_at FROM public.warranty_claims WHERE id=$1", [claim]),
+  null,
+  "Resolvido vem das visitas",
+);
+assert.match(
+  await value(
+    "SELECT column_default FROM information_schema.columns WHERE table_schema='public' AND table_name='warranty_claims' AND column_name='reported_at'",
+  ),
+  /America\/Sao_Paulo/,
+);
+await db.query(
+  "INSERT INTO public.warranty_visits(claim_id,visit_date,done,outcome) VALUES($1,'2026-02-03',true,'voltar'),($1,'2026-02-09',false,'resolvido')",
+  [claim],
+);
+assert.equal(
+  await value("SELECT outcome FROM public.warranty_visits WHERE claim_id=$1 AND NOT done", [claim]),
+  null,
+  "Visita agendada não tem resultado",
+);
+const fix = await value(
+  "INSERT INTO public.warranty_visits(claim_id,visit_date,done,outcome) VALUES($1,'2026-02-10',true,'resolvido') RETURNING id",
+  [claim],
+);
+assert.equal(
+  await value("SELECT resolved_at::text FROM public.warranty_claims WHERE id=$1", [claim]),
+  "2026-02-10",
+);
+await db.query("UPDATE public.warranty_claims SET resolved_at=NULL WHERE id=$1", [claim]);
+assert.equal(
+  await value("SELECT resolved_at::text FROM public.warranty_claims WHERE id=$1", [claim]),
+  "2026-02-10",
+  "Não se digita a data em que resolveu",
+);
+await db.query("DELETE FROM public.warranty_visits WHERE id=$1", [fix]);
+assert.equal(
+  await value("SELECT resolved_at FROM public.warranty_claims WHERE id=$1", [claim]),
+  null,
+);
+const otherStage = await value("SELECT id FROM public.work_stages WHERE work_id=$1 LIMIT 1", [
+  work,
+]);
+await rejects(
+  "INSERT INTO public.warranty_claims(warranty_id,description,work_stage_id) VALUES($1,'X',$2)",
+  [legacy, otherStage],
+  /etapa do chamado/,
+);
+await db.query("DELETE FROM public.warranties WHERE id=$1", [legacy]);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.warranties WHERE id=$1", [legacy]),
+  1,
+  "Equipe não apaga garantia",
+);
+await as(admin);
+const workWarranty = await value(
+  "INSERT INTO public.warranties(work_id,start_date,end_date,term_months) VALUES($1,'2026-03-01','2027-03-01',12) RETURNING id",
+  [work],
+);
+await rejects(
+  "INSERT INTO public.warranties(work_id,start_date,end_date) VALUES($1,'2026-03-01','2027-03-01')",
+  [work],
+  /duplicate key/,
+);
+const workClaim = await value(
+  "INSERT INTO public.warranty_claims(warranty_id,description,work_stage_id) VALUES($1,'Rejunte',$2) RETURNING id",
+  [workWarranty, otherStage],
+);
+assert.ok(
+  (await value(
+    "SELECT count(*)::int FROM public.work_history WHERE entity='warranty_claims' AND entity_id=$1",
+    [workClaim],
+  )) > 0,
+  "Chamado da obra entra no histórico",
+);
+await db.query(
+  "INSERT INTO public.financial_entries(work_id,direction,category,description,amount,due_date,incurred,warranty_claim_id) VALUES($1,'saida','Garantia','Garantia GAR',150,'2026-03-10',true,$2)",
+  [work, workClaim],
+);
+await rejects(
+  "DELETE FROM public.warranty_claims WHERE id=$1",
+  [workClaim],
+  /foreign key/,
+  "Chamado com custo lançado não é apagado",
+);
+await db.query("DELETE FROM public.warranties WHERE id=$1", [legacy]);
+assert.equal(
+  await value("SELECT count(*)::int FROM public.warranty_claims WHERE id=$1", [claim]),
+  0,
+);
+await db.exec("RESET ROLE");
+await db.exec("SET ROLE anon");
+await rejects("SELECT count(*) FROM public.warranties", [], /permission denied/);
+await db.exec("RESET ROLE");
+console.log("PASS: warranties (legacy works, claims resolved by visits, same-work stages, access)");
 await db.close();

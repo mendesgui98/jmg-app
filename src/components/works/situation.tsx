@@ -153,7 +153,7 @@ export function WorkSituation({
               key={r.id}
               to="/obras/$id"
               params={{ id: work.id }}
-              search={{ tab: r.kind, record: r.id }}
+              search={{ tab: r.kind === "assistencia" ? "garantia" : r.kind, record: r.id }}
               className="flex items-center gap-3 px-4 py-3 text-sm hover:bg-muted/30 sm:px-5"
             >
               <IconBubble icon={ClipboardList} tone="brand" />
