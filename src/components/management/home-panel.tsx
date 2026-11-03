@@ -12,6 +12,7 @@ import {
   HardHat,
   Percent,
   Plus,
+  ShieldCheck,
   Wallet,
 } from "lucide-react";
 import type { WorkSummary } from "@/lib/dashboard-data";
@@ -43,6 +44,9 @@ import {
   type MarginTone,
 } from "@/lib/panel-insights";
 import { commercialOptions } from "@/lib/commercial-data";
+import { warrantyAlerts } from "@/lib/warranty";
+import { warrantyInfo, warrantyOptions } from "@/lib/warranty-data";
+import { WarrantyHealthCard } from "@/components/warranty/warranty-health";
 import { WorkCard } from "@/components/works/work-card";
 import { EmptyState } from "@/components/feedback";
 import { Segmented } from "@/components/kpi";
@@ -449,13 +453,22 @@ function PanelHero({
   );
 }
 
+type CompanyAlert = {
+  title: string;
+  detail: string;
+  to: string;
+  action: string;
+  /** Aviso de garantia (escudo, laranja quando é só vencimento). */
+  warranty?: "atendimento" | "vencimento";
+};
+
 function Attention({
   works,
   company = [],
 }: {
   works: WorkSummary[];
   /** Alertas da empresa (ex.: caixa negativo previsto), antes dos das obras. */
-  company?: { title: string; detail: string; to: string; action: string }[];
+  company?: CompanyAlert[];
 }) {
   const items = useAttentionItems(works);
   const [all, setAll] = useState(false);
@@ -476,13 +489,25 @@ function Attention({
       {totalAlerts ? (
         <ul className="space-y-2">
           {company.map((c) => (
-            <li key={c.title}>
+            <li key={c.title + c.detail}>
               <Link
                 to={c.to}
-                className="flex items-center gap-3 rounded-xl bg-negative-soft p-3 transition-colors hover:brightness-95"
+                className={cn(
+                  "flex items-center gap-3 rounded-xl p-3 transition-colors hover:brightness-95",
+                  c.warranty === "vencimento" ? "bg-gold-soft" : "bg-negative-soft",
+                )}
               >
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-negative text-white">
-                  <Wallet className="h-4 w-4" />
+                <span
+                  className={cn(
+                    "flex h-9 w-9 shrink-0 items-center justify-center rounded-lg text-white",
+                    c.warranty === "vencimento" ? "bg-gold" : "bg-negative",
+                  )}
+                >
+                  {c.warranty ? (
+                    <ShieldCheck className="h-4 w-4" />
+                  ) : (
+                    <Wallet className="h-4 w-4" />
+                  )}
                 </span>
                 <span className="min-w-0 flex-1 text-sm">
                   <b className="block leading-snug">{c.title}</b>
@@ -1352,6 +1377,7 @@ export function HomeDashboard({
       ? { from: search.from || "", to: search.to || "" }
       : periodRange(search.period || "todos");
   const { data: budgets } = useQuery(commercialOptions(true));
+  const { data: warranty } = useQuery(warrantyOptions);
   const funnel = budgets
     ? commercialFunnel(budgets.filter((b) => inPeriod(b.issue_date, range.from, range.to)))
     : null;
@@ -1379,16 +1405,33 @@ export function HomeDashboard({
       };
     });
   const late = delinquency(receivables, data.finance.settlements, today);
-  const company = projection.firstNegative
-    ? [
-        {
-          title: `Caixa negativo previsto em ${fmtDate(projection.firstNegative.start)}`,
-          detail: `Menor saldo projetado: ${brl(projection.min)}`,
-          to: "/financeiro",
-          action: "Ver contas",
-        },
-      ]
-    : [];
+  const company: CompanyAlert[] = [
+    ...(projection.firstNegative
+      ? [
+          {
+            title: `Caixa negativo previsto em ${fmtDate(projection.firstNegative.start)}`,
+            detail: `Menor saldo projetado: ${brl(projection.min)}`,
+            to: "/financeiro",
+            action: "Ver contas",
+          },
+        ]
+      : []),
+    ...(warranty
+      ? warrantyAlerts(
+          warranty.warranties,
+          warranty.claims,
+          warranty.visits,
+          today,
+          (w) => warrantyInfo(w, warranty).name,
+        ).map((a) => ({
+          title: a.title,
+          detail: a.detail,
+          to: "/garantias",
+          action: a.kind === "atendimento" ? "Agendar" : "Ver garantia",
+          warranty: a.kind,
+        }))
+      : []),
+  ];
   const alertCount = useAttentionItems(works).length + company.length;
   const inWork = data.works.filter(
     (s) => s.work.linked_budget_id && s.work.status !== "concluida",
@@ -1497,6 +1540,9 @@ export function HomeDashboard({
           </div>
         )}
         <MarginCard works={works} />
+        <div className="mt-4">
+          <WarrantyHealthCard />
+        </div>
       </section>
 
       <section aria-labelledby="painel-comercial">

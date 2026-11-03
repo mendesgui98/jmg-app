@@ -4,6 +4,20 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-03 — Garantias (branch `claude/eager-carson-kxne4y`)
+
+**Pedido:** controle de garantia das obras entregues (prazo a partir da entrega, visitas, itens por etapa, relatório para saber onde se atentar), inclusive obras entregues antes da plataforma com início/fim e os dias que faltam. Mockups aprovados no artifact "Garantias JMG — mockups".
+
+**Decisões do Guilherme:** menu Garantias + aba Garantia na obra (substitui a aba Assistência, cujos registros viram chamados); 12 meses padrão, editável por obra; custo da visita vai ao Financeiro como conta a pagar ligada ao chamado; vistoria final no 11º mês e avisos no Painel já nesta versão.
+
+**Como ficou:**
+
+- Migração `20261103000045_warranties.sql`: `warranties` (uma por obra, ou avulsa sem obra com nome/cliente/endereço), `warranty_claims` (GAR-0001, etapa do cadastro Etapas da obra + etapa da obra, quem executou, avaliação procedente/não coberto com motivo, lição, fotos em `records/warranty`), `warranty_visits` (agendada/feita, resultado); `resolved_at` do chamado vem das visitas (trigger); `financial_entries.warranty_claim_id` + categoria "Garantia"; RLS admin/financeiro/equipe (apagar garantia só quem vê custos); auditoria em work_history; migração dos registros de assistência. Testes em `tests/audit-integrity.mjs`.
+- Regras puras em `src/lib/warranty.ts` (+ testes): `warrantyState`, `addMonths`, dias úteis, `claimStatus`, `claimSla` (5 dias úteis até a 1ª visita), `warrantyReport`, `warrantyAlerts`. Dados em `warranty-data.ts`.
+- Telas: `/garantias` (`components/warranty/warranty-board.tsx`), aba Garantia (`work-warranty.tsx`), formulários (`warranty-dialogs.tsx`), relatório `/garantias/relatorio/pdf`, card e avisos no Painel (`warranty-health.tsx`, `home-panel.tsx`).
+
+**Pendências / próximas melhorias:** visitas agendadas ainda não aparecem no Planejamento; prazo padrão fixo em 12 meses (sem tela em Configurações).
+
 ### 2026-11-02 — Contínuo de volta + "Com quebra de página" sem cortes (branch `claude/hopeful-mccarthy-0fob9w`)
 
 **Pedido:** voltar o PDF contínuo como era (uma página), mantendo a opção em folhas, mas sem cortar etapas no meio (ex.: Limpeza dividida entre folhas) e sem espaços vazios; folhas podem ser "um A4 um pouco mais estendido".
