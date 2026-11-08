@@ -12,7 +12,7 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-9 → R0-6 (R0-1 e R0-8 esperam as decisões).
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-6 (R0-1 e R0-8 esperam as decisões).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -22,7 +22,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Caso real (08/11, obra da Caroline Zeppelini):** "Responsabilidade técnica" ticada como executada no checklist e o cronograma não andou nada; o cabeçalho mostra "avanço físico 1,47%" mas nenhuma barra aparece no gráfico. Investigar de onde vem o 1,47% (avanço digitado em algum serviço ou referência da abertura da obra) e garantir que avanço pequeno também apareça (barra mínima visível + rótulo do %).
 - **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar; o % do cabeçalho é sempre a soma visível das barras.
 - **Depende do Guilherme:**
-  1. Serviço só "feito / não feito" ou dá para marcar parcial (ex.: 50%)?
+  1. ~~Serviço só "feito / não feito" ou parcial?~~ **Respondido (08/11): só feito / não feito** (ticou = 100%, desmarcou = 0%); o % manual da aba Etapas vira só leitura para serviços.
   2. Itens avulsos do checklist (sem serviço) contam no avanço ou são só lembrete?
   3. A equipe de campo pode ticar (e com isso mover o avanço) ou só admin/financeiro?
 
@@ -61,7 +61,8 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 
 - **Por quê:** hoje são 15 abas (Visão geral, Etapas, Checklist, Financeiro, Cronograma, Compras, Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões) que não conversam entre si.
 - **Já validado:** Visão geral, Etapas, Checklist, Financeiro e Cronograma ficam.
-- **Em aberto:** Compras (explicado: compra → contas a pagar; chegada do material → custo da obra; pagamento → só caixa — decidir se fica, simplifica ou junta ao Financeiro) e as demais abas, que o Guilherme ainda vai passar.
+- **Decidido (08/11):** Compras sai como aba e vai para dentro do Financeiro da obra, simplificada como checklist de materiais (ver R0-10).
+- **Em aberto:** as demais abas (Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões), que o Guilherme ainda vai passar.
 - **Onde:** `src/routes/_authenticated/obras.$id.index.tsx` e componentes de `components/works/`.
 - **Depende do Guilherme:** terminar de passar as abas.
 - **Relacionada:** R3-3 (parcela liberada por etapas concluídas) encaixa depois de R0-1 e R0-2.
@@ -72,7 +73,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Diagnóstico (código atual, `components/works/budget-vs-actual.tsx`):** a tabela mistura três bases sem dizer: "Valor contratado" é preço de **venda**; a coluna "Orçado" é **custo direto** (MO + material, sem estrutura/margem); "Realizado" são só as **saídas pagas** com etapa. O que o cliente pagou (entradas) **não aparece em lugar nenhum**, e a "Diferença" compara gasto com "orçado × avanço" — com avanço desatualizado (ver R0-1) o número parece absurdo. Gastos sem etapa entram no total como uma linha a mais.
 - **O que fazer:** separar em dois blocos claros, com números que fecham à vista:
   1. **Cliente:** contratado (venda) − recebido = a receber, com barra de avanço financeiro (mesma fonte do recibo e do Financeiro).
-  2. **Custo da obra:** custo previsto − gasto pago = saldo do custo, por etapa, com barra gasto × previsto e avanço físico ao lado; "a executar" para etapa não iniciada; gastos sem etapa destacados como alerta ("ligar à etapa").
+  2. **Custo da obra:** custo previsto − gasto pago = saldo do custo, por etapa, **separado em mão de obra e material** (hoje está tudo somado numa coluna só; `stageCosts` já separa `laborSpent`/`materialSpent` pela categoria da saída), com barra gasto × previsto e avanço físico ao lado; "a executar" para etapa não iniciada; gastos sem etapa destacados como alerta ("ligar à etapa").
   - Resultado previsto (venda − custo) no fim, vindo de `computeWorkResult`/executive.ts, sem fórmula nova na tela. Visual em cartões/barras no padrão azul + dourado do Painel, legível no celular.
 - **Onde:** `components/works/budget-vs-actual.tsx`, `src/lib/operations.ts` (`stageCosts`, `earnedVariance`), `src/lib/work-composition.ts`; testes da regra nova.
 - **Pronto quando:** na obra da Caroline Zeppelini os números batem com o Financeiro (recebido, a receber, gasto) e cada total é a soma das linhas exibidas.
@@ -100,13 +101,26 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
   - cada barra mostra planejado × realizado (preenchimento = avanço, que vem do checklist, R0-1) e fica vermelha quando atrasada;
   - **arrastar a barra** muda início/fim, **puxar a ponta** muda a duração; ao soltar pede o motivo e grava como uma revisão do cronograma (`shift_work_stages`); arrastar uma etapa oferece empurrar as seguintes;
   - clicar na barra abre painel lateral curto (datas planejadas/reais, responsável, avanço, "ver serviços" → aba Etapas);
-  - **marcações** na linha do tempo: marcos (ex.: "entrega da bancada", "visita do cliente", "concretagem"), com data, nome e cor — tabela nova `work_milestones` (GRANT explícito, auditada em work_history), aparecem também na folha PDF;
+  - **marcações** na linha do tempo: marcos (ex.: "entrega da bancada", "visita do cliente", "concretagem"), com data, nome e cor — tabela nova `work_milestones` (GRANT explícito, auditada em work_history), aparecem **sempre** na folha PDF do cliente (decisão do Guilherme, 08/11: não precisa ocultar);
   - linhas de baixo: parcelas (paga/em aberto/vencida, R0-5) e entregas de material do cliente;
   - botão "PDF do cliente" continua gerando a folha atual.
   - A lista repetida de etapas sai desta aba (fica só em Etapas, R0-8).
 - **Onde:** `components/schedules/schedule-dashboard.tsx` (reaproveitado dentro da aba da obra), `buildScheduleSheets`/`schedule-dashboard.ts` (regras puras testadas), `schedule-planning.tsx`, `schedule.tsx`, migration de `work_milestones`. Primeiro passo (rápido, pode vir antes de tudo): só colocar o painel do cronograma na aba da obra; depois arrastar e marcos.
 - **Pronto quando:** dá para rolar o cronograma, ver onde a obra está hoje, arrastar uma etapa para outra semana (fica registrado com motivo) e criar um marco, tudo sem abrir formulário longo; funciona no celular (rolagem com o dedo, edição por toque longo).
 - **Depende de:** R0-5 (parcelas pagas) e R0-1 (avanço) para mostrar tudo; o arrastar e os marcos podem vir antes.
+
+### [ ] R0-10 · Compras vira checklist de materiais (dentro do Financeiro), com orçado × gasto × saldo
+
+- **Por quê:** a aba Compras (pedido → chegada → pagamento) não ficou clara. O Guilherme quer a lista dos materiais que foram orçados, etapa por etapa, para ir ticando o que comprou ou o que não precisou, e saber se o material orçado foi mesmo usado.
+- **O que fazer:**
+  - a lista nasce do orçamento aprovado: cada material de cada serviço (snapshot `budget_items.materials`: nome, unidade, quantidade, custo) vira uma linha da obra agrupada por etapa; materiais "cliente fornece" aparecem marcados assim e não entram no custo; nova revisão aprovada re-sincroniza sem perder o que já foi marcado (mesma ideia de `sync_budget_stage_services`);
+  - cada linha tem três estados: **a comprar** / **comprei** / **não precisou**; dá para adicionar material que não estava no orçamento ("extra", com motivo);
+  - **"Comprei"** abre um formulário curto (quantidade, valor pago, fornecedor, conta, comprovante) e já lança a saída no Financeiro, categoria Materiais, ligada à etapa e ao material — o gasto é informado num lugar só, nunca duas vezes; pagamento a prazo continua possível (vira conta a pagar, como a compra de hoje);
+  - por etapa e no total: **material orçado × gasto × saldo**, com destaque para material comprado acima do orçado, comprado e não orçado e "não precisou" (economia);
+  - aparece como seção "Compras de material" dentro da aba Financeiro da obra; a aba Compras sai.
+- **Onde:** reaproveitar `purchase_orders`/`purchase_lines` (já têm `material_key`) e `financial_entries` (`stage_id`, categoria "Materiais"); tabela nova ou colunas para o estado da linha (a comprar/comprei/não precisou) com GRANT explícito, RLS `can_see_costs` e auditoria; regra pura testada (`src/lib/material-checklist.ts`) para orçado × gasto × saldo; `components/works/purchases.tsx`, `components/works/finance.tsx`.
+- **Pronto quando:** na obra da Caroline a lista mostra os materiais orçados por etapa (ex.: Proteção e sinalização: rolos de lona, fitas), ticar "comprei" lança a saída no Financeiro e o saldo do material da etapa muda na hora; "não precisou" aparece como economia.
+- **Depende do Guilherme:** perguntas 11 e 12 (ver a página de visualização).
 
 ---
 
