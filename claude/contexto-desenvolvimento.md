@@ -4,6 +4,22 @@ Registro das tasks feitas pelo Claude neste repositório. Regras gerais do proje
 
 ## Tasks concluídas
 
+### 2026-11-08 — R0-2 parcelas do orçamento em contas a receber + barra de abas da obra (branch `claude/magical-newton-k1utex`)
+
+**Pedido:** tudo se conversar; as parcelas que o cliente vai pagar (orçamento/cronograma) já aparecem no Financeiro como valores a receber. Também: barra de abas da obra organizada, cada aba numa caixa.
+
+**Decisões do Guilherme:** parcelas criadas a partir do orçamento também nas obras que já existem; o que já foi lançado à mão não pode duplicar.
+
+**Como ficou:**
+
+- Migração `20261108000046_contract_installments.sql`: `create_contract_installments(_request_id, _work_id, _rows)` — uma conta a receber por condição (descrição própria, categoria Contrato, cliente da obra, condição em `notes`), grupo `financial_groups.source='contract'`, idempotente pelo pedido e uma geração por obra; aceita obra com entradas manuais (a tela manda só as que faltam). Testes em `tests/audit-integrity.mjs`.
+- `src/lib/contract-installments.ts` (+ testes): `contractInstallmentPlan` (valores por `splitPayments`, igual ao PDF), `termDueDate` (lê "Na aprovação", "Ao concluir as etapas 1 a 4", "No início da etapa 3", "Na entrega", "30 dias"), `stageWindows` (datas das etapas da obra pela seção do orçamento, com o cronograma do orçamento de reserva), `matchExisting` (entrada manual de mesmo valor = parcela já lançada).
+- `convertBudgetToWork` gera as parcelas logo após criar a obra (se falhar, a obra é criada e o botão fica na Visão geral). `ContractInstallmentsButton` (`components/works/contract-installments.tsx`) na Visão geral para obras existentes: conferência editável, "já lançada no Financeiro" marcada automaticamente; obras sem condições no orçamento continuam com o "Gerar parcelas do contrato" antigo.
+- Abas da obra (`obras.$id.index.tsx`, `WORK_TABS`): grade dentro de uma caixa, cada aba um bloco com ícone, aba ativa em azul.
+- Teste ponta a ponta no app local (Docker): aprovação pela tela → converter em obra → 4 parcelas com vencimento no fim das etapas citadas; obra com entrada manual de R$ 9.767,44 → a 1ª parcela veio marcada e só 3 foram geradas.
+
+**Pendências:** R0-2b (vencimento acompanhar o cronograma, revisão refazer parcelas em aberto).
+
 ### 2026-11-03 — Garantias (branch `claude/eager-carson-kxne4y`)
 
 **Pedido:** controle de garantia das obras entregues (prazo a partir da entrega, visitas, itens por etapa, relatório para saber onde se atentar), inclusive obras entregues antes da plataforma com início/fim e os dias que faltam. Mockups aprovados no artifact "Garantias JMG — mockups".

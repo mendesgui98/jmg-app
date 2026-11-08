@@ -29,12 +29,19 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
   3. ~~A equipe pode ticar?~~ **Respondido (08/11): pode** (hoje só o Guilherme usa; restringir acessos da equipe fica para depois). Ao ticar, **é obrigatório anexar foto ou documento** como comprovação (decidido 08/11, segunda conversa: "para dar como feito precisa necessariamente de uma foto ou documento"; ex.: ART emitida → envia o documento; demolição finalizada → manda as fotos): foto vira registro da etapa (`work_records` com `stage_id`, aparece na aba Fotos/galeria sem duplicar), documento (ex.: ART/RRT da responsabilidade técnica) vai para os documentos da obra (`jmg-documents`); o item mostra o comprovante e quem ticou/quando.
 - **Todas as decisões tomadas — pronta para começar.**
 
-### [ ] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
+### [x] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
 
 - **Por quê:** a conversão do orçamento aprovado cria etapas e serviços, mas não as parcelas; hoje cada uma é lançada à mão no Financeiro.
 - **O que fazer:** ao converter o orçamento em obra, cada parcela de `payment_terms` vira uma conta a receber (`financial_entries` entrada) da obra, valores em centavos por `splitPayments`, vencimento pela data combinada ou pelo início da etapa ligada no cronograma (`budget_section_dates`). Cronograma mudou → vencimento das parcelas em aberto acompanha; nova revisão aprovada → refaz as parcelas em aberto, recebidas ficam intactas. Obras já existentes (**decidido 08/11: sim, a partir do orçamento**): botão "Gerar parcelas do orçamento" na obra, com conferência antes de confirmar, que casa o que já foi lançado/recebido com a parcela certa e nunca duplica.
 - **Onde:** `convert_budget`/`supersede_previous_budget` (migration), `src/lib/proposal.ts` (`splitPayments`, `stageDates`), lógica pura testada nova para vencimentos, aba Financeiro da obra.
 - **Pronto quando:** aprovar e converter um orçamento mostra todas as parcelas em Contas a receber com valor e vencimento certos, sem lançamento manual.
+- **Feito (08/11):** `create_contract_installments` (migration `20261108000046`) + `src/lib/contract-installments.ts` (puro, testado). A conversão já gera as parcelas; obras existentes têm "Gerar parcelas do orçamento" na Visão geral, com conferência e entradas já lançadas marcadas para não duplicar. Testado no app local: orçamento aprovado e convertido pela tela gerou as 4 parcelas com vencimento no fim das etapas citadas. **Ficou para a R0-2b:** vencimento acompanhar o cronograma e revisão aprovada refazer as parcelas em aberto.
+
+### [ ] R0-2b · Parcelas em aberto acompanham o cronograma e as revisões
+
+- **Por quê:** hoje o vencimento é calculado na geração; se o cronograma muda ou uma revisão é aprovada, as parcelas em aberto não se atualizam.
+- **O que fazer:** guardar em cada parcela a condição de origem (etapa/entrega/aprovação); quando as datas das etapas mudarem (`shift_work_stages`, edição da etapa) recalcular o vencimento das parcelas sem recebimento (o guard `guard_installment_entry` hoje proíbe mudar parcela: liberar só `due_date` de parcela de contrato sem baixa, com registro em work_history); revisão aprovada (`supersede_previous_budget`) refaz valores das parcelas em aberto mantendo as recebidas.
+- **Pronto quando:** arrastar a Alvenaria uma semana para frente muda o vencimento da "1ª medição" sozinho; parcela já recebida nunca muda.
 
 ### [ ] R0-3 · "Recebi" em um clique, com recibo na hora
 
