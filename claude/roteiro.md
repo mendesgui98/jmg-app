@@ -12,7 +12,7 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-6 (R0-1 e R0-8 esperam as decisões).
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-9 → R0-6 (R0-1 e R0-8 esperam as decisões).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -88,6 +88,23 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Onde:** `components/works/schedule.tsx`, `stage-services.tsx`, `checklist.tsx`, `src/routes/_authenticated/obras.$id.index.tsx`.
 - **Pronto quando:** dá para dizer em uma frase o que cada aba faz; editar etapa, serviço e avanço tem botão visível; nada aparece duplicado entre Etapas, Checklist e Cronograma.
 - **Depende de:** decisões da R0-1. **Depende do Guilherme:** aprovar a junção Etapas + Checklist.
+
+### [ ] R0-9 · Cronograma interativo da obra (o gráfico do PDF, mas vivo)
+
+- **Por quê:** a aba mostra no topo uma miniatura do PDF (bonita, mas parada) e embaixo repete a lista de etapas com uma "edição" que não edita nada útil.
+- **Diagnóstico (código atual):** aba Cronograma = `SchedulePlanning` (miniatura `ScaledSheets` do PDF, em escala reduzida) + a mesma lista do `Schedule` em `mode="cronograma"`; datas só mudam pelo formulário longo da etapa.
+- **O que fazer:** trocar a miniatura + lista por um **gráfico de Gantt interativo** com o mesmo visual físico-financeiro do PDF (`.cr-*`, azul/dourado):
+  - linhas = etapas, colunas = semanas; **rola na horizontal** e abre posicionado em **hoje** (linha vertical "hoje"); zoom semana/mês;
+  - cada barra mostra planejado × realizado (preenchimento = avanço, que vem do checklist, R0-1) e fica vermelha quando atrasada;
+  - **arrastar a barra** muda início/fim, **puxar a ponta** muda a duração; ao soltar pede o motivo e grava como uma revisão do cronograma (`shift_work_stages`); arrastar uma etapa oferece empurrar as seguintes;
+  - clicar na barra abre painel lateral curto (datas planejadas/reais, responsável, avanço, "ver serviços" → aba Etapas);
+  - **marcações** na linha do tempo: marcos (ex.: "entrega da bancada", "visita do cliente", "concretagem"), com data, nome e cor — tabela nova `work_milestones` (GRANT explícito, auditada em work_history), aparecem também na folha PDF;
+  - linhas de baixo: parcelas (paga/em aberto/vencida, R0-5) e entregas de material do cliente;
+  - botão "PDF do cliente" continua gerando a folha atual.
+  - A lista repetida de etapas sai desta aba (fica só em Etapas, R0-8).
+- **Onde:** componente novo em `components/works/` reaproveitando `buildScheduleSheets`/`schedule-dashboard.ts` (regras puras testadas), `schedule-planning.tsx`, `schedule.tsx`, migration de `work_milestones`; mesmo gráfico no painel `/cronogramas/$id`.
+- **Pronto quando:** dá para rolar o cronograma, ver onde a obra está hoje, arrastar uma etapa para outra semana (fica registrado com motivo) e criar um marco, tudo sem abrir formulário longo; funciona no celular (rolagem com o dedo, edição por toque longo).
+- **Depende de:** R0-5 (parcelas pagas) e R0-1 (avanço) para mostrar tudo; o arrastar e os marcos podem vir antes.
 
 ---
 
