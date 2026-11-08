@@ -12,7 +12,7 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-1 → R0-6 (R0-1 espera as decisões).
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 → R0-6 (R0-1 espera as decisões).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -64,6 +64,18 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-1 → R0-6 (R0-1 espera a
 - **Onde:** `src/routes/_authenticated/obras.$id.index.tsx` e componentes de `components/works/`.
 - **Depende do Guilherme:** terminar de passar as abas.
 - **Relacionada:** R3-3 (parcela liberada por etapas concluídas) encaixa depois de R0-1 e R0-2.
+
+### [ ] R0-7 · Visão geral: refazer o "Orçado × realizado" (conta e visual)
+
+- **Por quê:** o Guilherme lançou o que recebeu do cliente e a tabela "soma/subtrai errado"; além disso o visual está feio.
+- **Diagnóstico (código atual, `components/works/budget-vs-actual.tsx`):** a tabela mistura três bases sem dizer: "Valor contratado" é preço de **venda**; a coluna "Orçado" é **custo direto** (MO + material, sem estrutura/margem); "Realizado" são só as **saídas pagas** com etapa. O que o cliente pagou (entradas) **não aparece em lugar nenhum**, e a "Diferença" compara gasto com "orçado × avanço" — com avanço desatualizado (ver R0-1) o número parece absurdo. Gastos sem etapa entram no total como uma linha a mais.
+- **O que fazer:** separar em dois blocos claros, com números que fecham à vista:
+  1. **Cliente:** contratado (venda) − recebido = a receber, com barra de avanço financeiro (mesma fonte do recibo e do Financeiro).
+  2. **Custo da obra:** custo previsto − gasto pago = saldo do custo, por etapa, com barra gasto × previsto e avanço físico ao lado; "a executar" para etapa não iniciada; gastos sem etapa destacados como alerta ("ligar à etapa").
+  - Resultado previsto (venda − custo) no fim, vindo de `computeWorkResult`/executive.ts, sem fórmula nova na tela. Visual em cartões/barras no padrão azul + dourado do Painel, legível no celular.
+- **Onde:** `components/works/budget-vs-actual.tsx`, `src/lib/operations.ts` (`stageCosts`, `earnedVariance`), `src/lib/work-composition.ts`; testes da regra nova.
+- **Pronto quando:** na obra da Caroline Zeppelini os números batem com o Financeiro (recebido, a receber, gasto) e cada total é a soma das linhas exibidas.
+- **Depende do Guilherme:** print ou os números que viu errados na obra da Caroline, para reproduzir o erro exato.
 
 ---
 
