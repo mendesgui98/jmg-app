@@ -12,7 +12,7 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 → R0-6 (R0-1 espera as decisões).
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-6 (R0-1 e R0-8 esperam as decisões).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -76,6 +76,18 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 → R0-6 (R0-1
 - **Onde:** `components/works/budget-vs-actual.tsx`, `src/lib/operations.ts` (`stageCosts`, `earnedVariance`), `src/lib/work-composition.ts`; testes da regra nova.
 - **Pronto quando:** na obra da Caroline Zeppelini os números batem com o Financeiro (recebido, a receber, gasto) e cada total é a soma das linhas exibidas.
 - **Depende do Guilherme:** print ou os números que viu errados na obra da Caroline, para reproduzir o erro exato.
+
+### [ ] R0-8 · Aba Etapas com propósito claro (e fácil de editar)
+
+- **Por quê:** a aba está repetitiva e "sem nexo": não fica claro para que serve nem como editar.
+- **Diagnóstico (código atual):** Etapas e Cronograma são **o mesmo componente** (`components/works/schedule.tsx`, `mode="etapas"`/`"cronograma"`) mostrando quase a mesma lista (nome, status, responsável, peso, datas, %). A edição está escondida: clicar no nome ou no lápis abre um formulário longo que mistura avanço, peso, datas planejadas/reais, observações, pendências, executados, próximos serviços, fotos e motivo de reprogramação. Dentro de cada cartão vem ainda o painel de serviços com custos (`stage-services.tsx`), editável por campos soltos que salvam ao sair do campo. O checklist repete os mesmos serviços em outra aba.
+- **Proposta (cada aba com uma pergunta só):**
+  - **Etapas = "o que tem para fazer e quanto já foi feito"**: cada etapa é um cartão que abre a lista dos seus serviços **com o tique do checklist ao lado** (absorve a aba Checklist e resolve a R0-1 no mesmo lugar); cabeçalho do cartão com barra de avanço, status, responsável e, para admin/financeiro, custo previsto × gasto. Botões visíveis "Editar etapa", "Adicionar serviço", "Adicionar item"; edição em formulário curto (nome, responsável, peso, observações).
+  - **Cronograma = "quando"**: só datas (planejado × real, reprogramação com motivo), na grade de semanas que já existe; datas saem do formulário de Etapas.
+  - Pendências/executados/próximos serviços deixam de ser textos livres da etapa: viram itens do checklist e Pendências (`work_issues`), que já existem.
+- **Onde:** `components/works/schedule.tsx`, `stage-services.tsx`, `checklist.tsx`, `src/routes/_authenticated/obras.$id.index.tsx`.
+- **Pronto quando:** dá para dizer em uma frase o que cada aba faz; editar etapa, serviço e avanço tem botão visível; nada aparece duplicado entre Etapas, Checklist e Cronograma.
+- **Depende de:** decisões da R0-1. **Depende do Guilherme:** aprovar a junção Etapas + Checklist.
 
 ---
 
