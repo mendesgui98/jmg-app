@@ -8,6 +8,65 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 ---
 
+## Fase 0 — Reestruturação da obra (prioridade atual, levantada em 08/11)
+
+Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
+o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-1 → R0-6 (R0-1 espera as decisões).
+
+### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
+
+- **Por quê:** hoje o checklist é só lembrete (regra atual: "marcar nunca muda o avanço"); o avanço da etapa é digitado à mão por serviço na aba Etapas, então o mesmo trabalho é informado duas vezes e o cronograma fica desatualizado.
+- **O que fazer:** o checklist vira a fonte do avanço — marcar o item de um serviço põe o serviço em 100% (desmarcar volta a 0%); a etapa recalcula pelo peso em valor (`servicesProgress`), e cronograma, painel do cronograma e Painel acompanham sozinhos. O % manual da aba Etapas passa a ser só leitura (ou parcial, conforme decisão). Atualizar a regra no `AGENTS.md`.
+- **Onde:** `work_checklist_items` + trigger novo (migration), `work_stage_services.progress`, `src/lib/work-checklist.ts`, `src/lib/work-progress.ts`, `components/works/checklist.tsx`, `components/works/stage-services.tsx`.
+- **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar.
+- **Depende do Guilherme:**
+  1. Serviço só "feito / não feito" ou dá para marcar parcial (ex.: 50%)?
+  2. Itens avulsos do checklist (sem serviço) contam no avanço ou são só lembrete?
+  3. A equipe de campo pode ticar (e com isso mover o avanço) ou só admin/financeiro?
+
+### [ ] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
+
+- **Por quê:** a conversão do orçamento aprovado cria etapas e serviços, mas não as parcelas; hoje cada uma é lançada à mão no Financeiro.
+- **O que fazer:** ao converter o orçamento em obra, cada parcela de `payment_terms` vira uma conta a receber (`financial_entries` entrada) da obra, valores em centavos por `splitPayments`, vencimento pela data combinada ou pelo início da etapa ligada no cronograma (`budget_section_dates`). Cronograma mudou → vencimento das parcelas em aberto acompanha; nova revisão aprovada → refaz as parcelas em aberto, recebidas ficam intactas. Obras já existentes: botão "Gerar parcelas do orçamento" que não duplica o que já foi lançado.
+- **Onde:** `convert_budget`/`supersede_previous_budget` (migration), `src/lib/proposal.ts` (`splitPayments`, `stageDates`), lógica pura testada nova para vencimentos, aba Financeiro da obra.
+- **Pronto quando:** aprovar e converter um orçamento mostra todas as parcelas em Contas a receber com valor e vencimento certos, sem lançamento manual.
+
+### [ ] R0-3 · "Recebi" em um clique, com recibo na hora
+
+- **Por quê:** receber hoje pede vários campos e o recibo só aparece como sugestão num aviso que some.
+- **O que fazer:** na conta a receber, botão "Recebi" com valor e data de hoje já preenchidos (só escolher a conta); ao salvar, entra como entrada no caixa e abre direto o recibo (`/recibos/$id`).
+- **Onde:** Financeiro (contas a receber e aba Financeiro da obra), `register_settlement`/fluxo de baixa existente.
+- **Pronto quando:** da parcela ao recibo aberto em no máximo 2 cliques.
+- **Depende de:** R0-2.
+
+### [ ] R0-4 · Recibo com o avanço financeiro em destaque
+
+- **Por quê:** o recibo já tem total/pago/saldo e uma barra fina; o Guilherme quer que o cliente veja claramente quanto já pagou e quanto falta.
+- **O que fazer:** proposta (a)+(c): barra grande "Pago X% · Falta Y%" com valores e linha do tempo das parcelas (pagas em verde, a deste recibo destacada, próximas em cinza com valor e data). Dados de `buildReceipt` (`summary`, parcelas), sem números novos.
+- **Onde:** `api/src/pdf/receipt-html.ts`, `src/lib/receipt.ts`.
+- **Pronto quando:** recibo gerado mostra o avanço financeiro visual e bate com o Financeiro.
+- **Depende do Guilherme:** confirmar o formato — (a) barra grande, (b) rosca, (c) linha do tempo das parcelas.
+
+### [ ] R0-5 · Cronograma mostra as parcelas pagas
+
+- **Por quê:** o painel do cronograma já sabe o que foi pago, mas a folha físico-financeira do cliente não marca as parcelas recebidas.
+- **O que fazer:** na folha (`ScheduleSheets`) e na aba Cronograma, parcela recebida marcada como paga (com data), em aberto/vencida diferenciadas; totais pago × a receber.
+- **Onde:** `src/lib/schedule-sheets.ts`, `components/works/schedule-sheets.tsx`.
+- **Pronto quando:** receber uma parcela muda a folha do cronograma sem nenhum outro passo.
+- **Depende de:** R0-2.
+
+### [ ] R0-6 · Reorganizar as abas da obra
+
+- **Por quê:** hoje são 15 abas (Visão geral, Etapas, Checklist, Financeiro, Cronograma, Compras, Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões) que não conversam entre si.
+- **Já validado:** Visão geral, Etapas, Checklist, Financeiro e Cronograma ficam.
+- **Em aberto:** Compras (explicado: compra → contas a pagar; chegada do material → custo da obra; pagamento → só caixa — decidir se fica, simplifica ou junta ao Financeiro) e as demais abas, que o Guilherme ainda vai passar.
+- **Onde:** `src/routes/_authenticated/obras.$id.index.tsx` e componentes de `components/works/`.
+- **Depende do Guilherme:** terminar de passar as abas.
+- **Relacionada:** R3-3 (parcela liberada por etapas concluídas) encaixa depois de R0-1 e R0-2.
+
+---
+
 ## Fase 1 — Segurança e confiabilidade (esta semana)
 
 ### [ ] R1-1 · E-mail de envio (SMTP)
