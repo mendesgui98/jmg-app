@@ -19,7 +19,8 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Por quê:** hoje o checklist é só lembrete (regra atual: "marcar nunca muda o avanço"); o avanço da etapa é digitado à mão por serviço na aba Etapas, então o mesmo trabalho é informado duas vezes e o cronograma fica desatualizado.
 - **O que fazer:** o checklist vira a fonte do avanço — marcar o item de um serviço põe o serviço em 100% (desmarcar volta a 0%); a etapa recalcula pelo peso em valor (`servicesProgress`), e cronograma, painel do cronograma e Painel acompanham sozinhos. O % manual da aba Etapas passa a ser só leitura (ou parcial, conforme decisão). Atualizar a regra no `AGENTS.md`.
 - **Onde:** `work_checklist_items` + trigger novo (migration), `work_stage_services.progress`, `src/lib/work-checklist.ts`, `src/lib/work-progress.ts`, `components/works/checklist.tsx`, `components/works/stage-services.tsx`.
-- **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar.
+- **Caso real (08/11, obra da Caroline Zeppelini):** "Responsabilidade técnica" ticada como executada no checklist e o cronograma não andou nada; o cabeçalho mostra "avanço físico 1,47%" mas nenhuma barra aparece no gráfico. Investigar de onde vem o 1,47% (avanço digitado em algum serviço ou referência da abertura da obra) e garantir que avanço pequeno também apareça (barra mínima visível + rótulo do %).
+- **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar; o % do cabeçalho é sempre a soma visível das barras.
 - **Depende do Guilherme:**
   1. Serviço só "feito / não feito" ou dá para marcar parcial (ex.: 50%)?
   2. Itens avulsos do checklist (sem serviço) contam no avanço ou são só lembrete?
@@ -93,7 +94,8 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 
 - **Por quê:** a aba mostra no topo uma miniatura do PDF (bonita, mas parada) e embaixo repete a lista de etapas com uma "edição" que não edita nada útil.
 - **Diagnóstico (código atual):** aba Cronograma = `SchedulePlanning` (miniatura `ScaledSheets` do PDF, em escala reduzida) + a mesma lista do `Schedule` em `mode="cronograma"`; datas só mudam pelo formulário longo da etapa.
-- **O que fazer:** trocar a miniatura + lista por um **gráfico de Gantt interativo** com o mesmo visual físico-financeiro do PDF (`.cr-*`, azul/dourado):
+- **Decisão do Guilherme (08/11):** a aba Cronograma da obra usa **o mesmo cronograma do painel** (`/cronogramas/$id`, `components/schedules/schedule-dashboard.tsx`: indicadores, grade de 10 semanas, pagamentos, materiais do cliente, revisões, "Lançar avanço"), que ele aprovou ("tá bonito, tudo certinho"). Uma tela só, mostrada nos dois lugares — sem segunda versão.
+- **O que fazer:** trocar a miniatura + lista pelo painel do cronograma, e evoluí-lo para um **gráfico interativo** com o mesmo visual físico-financeiro do PDF (`.cr-*`, azul/dourado):
   - linhas = etapas, colunas = semanas; **rola na horizontal** e abre posicionado em **hoje** (linha vertical "hoje"); zoom semana/mês;
   - cada barra mostra planejado × realizado (preenchimento = avanço, que vem do checklist, R0-1) e fica vermelha quando atrasada;
   - **arrastar a barra** muda início/fim, **puxar a ponta** muda a duração; ao soltar pede o motivo e grava como uma revisão do cronograma (`shift_work_stages`); arrastar uma etapa oferece empurrar as seguintes;
@@ -102,7 +104,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
   - linhas de baixo: parcelas (paga/em aberto/vencida, R0-5) e entregas de material do cliente;
   - botão "PDF do cliente" continua gerando a folha atual.
   - A lista repetida de etapas sai desta aba (fica só em Etapas, R0-8).
-- **Onde:** componente novo em `components/works/` reaproveitando `buildScheduleSheets`/`schedule-dashboard.ts` (regras puras testadas), `schedule-planning.tsx`, `schedule.tsx`, migration de `work_milestones`; mesmo gráfico no painel `/cronogramas/$id`.
+- **Onde:** `components/schedules/schedule-dashboard.tsx` (reaproveitado dentro da aba da obra), `buildScheduleSheets`/`schedule-dashboard.ts` (regras puras testadas), `schedule-planning.tsx`, `schedule.tsx`, migration de `work_milestones`. Primeiro passo (rápido, pode vir antes de tudo): só colocar o painel do cronograma na aba da obra; depois arrastar e marcos.
 - **Pronto quando:** dá para rolar o cronograma, ver onde a obra está hoje, arrastar uma etapa para outra semana (fica registrado com motivo) e criar um marco, tudo sem abrir formulário longo; funciona no celular (rolagem com o dedo, edição por toque longo).
 - **Depende de:** R0-5 (parcelas pagas) e R0-1 (avanço) para mostrar tudo; o arrastar e os marcos podem vir antes.
 
