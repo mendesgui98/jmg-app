@@ -552,7 +552,56 @@ await rejects(
   [group],
   /permission denied/,
 );
+// Parcelas do contrato a partir do orçamento (R0-2): uma conta a receber por condição, com a
+// descrição de cada uma, cliente da obra, idempotente e uma geração por obra.
+const contractCall = "SELECT public.create_contract_installments($1,$2,$3::jsonb)";
+await rejects(
+  contractCall,
+  [
+    await value("SELECT gen_random_uuid()"),
+    work,
+    JSON.stringify([{ description: "Entrada", amount: 10.005, due_date: "2026-11-10" }]),
+  ],
+  /centavos/,
+);
+const contractRequest = await value("SELECT gen_random_uuid()");
+const contractRows = JSON.stringify([
+  { description: "Entrada na assinatura", amount: 600, due_date: "2026-11-10" },
+  { description: "Entrega da obra", amount: 400.5, due_date: "2026-12-10" },
+]);
+assert.equal(await value(contractCall, [contractRequest, work, contractRows]), contractRequest);
+assert.equal(
+  await value(contractCall, [contractRequest, work, contractRows]),
+  contractRequest,
+  "Mesmo pedido não duplica as parcelas",
+);
+assert.equal(
+  await value(
+    `SELECT string_agg(description||'|'||amount||'|'||category||'|'||installment_index||'/'||installment_count, ';' ORDER BY installment_index)
+     FROM public.financial_entries WHERE group_id=$1 AND direction='entrada'`,
+    [contractRequest],
+  ),
+  "Entrada na assinatura|600|Contrato|1/2;Entrega da obra|400.5|Contrato|2/2",
+);
+assert.equal(
+  await value(
+    "SELECT count(*)::int FROM public.financial_entries e JOIN public.work_registry w ON w.id=e.work_id WHERE e.group_id=$1 AND e.person_id IS NOT DISTINCT FROM w.client_id",
+    [contractRequest],
+  ),
+  2,
+  "Parcelas ficam no nome do cliente da obra",
+);
+await rejects(
+  contractCall,
+  [await value("SELECT gen_random_uuid()"), work, contractRows],
+  /já foram geradas/,
+);
 await as(team);
+await rejects(
+  contractCall,
+  [await value("SELECT gen_random_uuid()"), work, contractRows],
+  /Sem permissão/,
+);
 await rejects("DELETE FROM public.work_stages WHERE work_id=$1", [work], /permission denied/);
 await rejects("DELETE FROM public.work_records WHERE work_id=$1", [work], /permission denied/);
 await rejects("UPDATE public.profiles SET email='x@evil' WHERE id=$1", [team], /permission denied/);

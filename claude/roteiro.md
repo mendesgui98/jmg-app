@@ -8,6 +8,173 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 ---
 
+## Fase 0 — Reestruturação da obra (prioridade atual, levantada em 08/11)
+
+Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
+o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
+Princípio (Guilherme, 08/11): **a plataforma inteira tem que se conversar** — orçamento, contrato, financeiro, cronograma, etapas e compras; mexeu em um, os outros atualizam. Nada é digitado duas vezes.
+
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-12 → R0-11 → R0-13 → R0-6 (esperam o Guilherme: modelo do termo de entrega na R0-13 e a aba Decisões na R0-6).
+
+### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
+
+- **Por quê:** hoje o checklist é só lembrete (regra atual: "marcar nunca muda o avanço"); o avanço da etapa é digitado à mão por serviço na aba Etapas, então o mesmo trabalho é informado duas vezes e o cronograma fica desatualizado.
+- **O que fazer:** o checklist vira a fonte do avanço — marcar o item de um serviço põe o serviço em 100% (desmarcar volta a 0%); a etapa recalcula pelo peso em valor (`servicesProgress`), e cronograma, painel do cronograma e Painel acompanham sozinhos. O % manual da aba Etapas passa a ser só leitura (ou parcial, conforme decisão). Atualizar a regra no `AGENTS.md`.
+- **Onde:** `work_checklist_items` + trigger novo (migration), `work_stage_services.progress`, `src/lib/work-checklist.ts`, `src/lib/work-progress.ts`, `components/works/checklist.tsx`, `components/works/stage-services.tsx`.
+- **Caso real (08/11, obra da Caroline Zeppelini):** "Responsabilidade técnica" ticada como executada no checklist e o cronograma não andou nada; o cabeçalho mostra "avanço físico 1,47%" mas nenhuma barra aparece no gráfico. Investigar de onde vem o 1,47% (avanço digitado em algum serviço ou referência da abertura da obra) e garantir que avanço pequeno também apareça (barra mínima visível + rótulo do %).
+- **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar; o % do cabeçalho é sempre a soma visível das barras.
+- **Depende do Guilherme:**
+  1. ~~Serviço só "feito / não feito" ou parcial?~~ **Respondido (08/11): só feito / não feito** (ticou = 100%, desmarcou = 0%); o % manual da aba Etapas vira só leitura para serviços.
+  2. ~~Itens avulsos contam?~~ **Respondido (08/11): contam, no avanço da própria etapa.** Criar um item novo numa etapa 100% baixa o % até ele ser ticado (ex.: "adicionar tomada na parede do quarto"). Regra: dentro da etapa o avanço é por item (cada item vale igual: itens feitos ÷ itens da etapa, mostrado como "5 de 6"); o peso da etapa na obra continua pelo valor (`valueWeights`). Substitui o `servicesProgress` ponderado por valor dentro da etapa.
+  3. ~~A equipe pode ticar?~~ **Respondido (08/11): pode** (hoje só o Guilherme usa; restringir acessos da equipe fica para depois). Ao ticar, **é obrigatório anexar foto ou documento** como comprovação (decidido 08/11, segunda conversa: "para dar como feito precisa necessariamente de uma foto ou documento"; ex.: ART emitida → envia o documento; demolição finalizada → manda as fotos): foto vira registro da etapa (`work_records` com `stage_id`, aparece na aba Fotos/galeria sem duplicar), documento (ex.: ART/RRT da responsabilidade técnica) vai para os documentos da obra (`jmg-documents`); o item mostra o comprovante e quem ticou/quando.
+- **Todas as decisões tomadas — pronta para começar.**
+
+### [x] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
+
+- **Por quê:** a conversão do orçamento aprovado cria etapas e serviços, mas não as parcelas; hoje cada uma é lançada à mão no Financeiro.
+- **O que fazer:** ao converter o orçamento em obra, cada parcela de `payment_terms` vira uma conta a receber (`financial_entries` entrada) da obra, valores em centavos por `splitPayments`, vencimento pela data combinada ou pelo início da etapa ligada no cronograma (`budget_section_dates`). Cronograma mudou → vencimento das parcelas em aberto acompanha; nova revisão aprovada → refaz as parcelas em aberto, recebidas ficam intactas. Obras já existentes (**decidido 08/11: sim, a partir do orçamento**): botão "Gerar parcelas do orçamento" na obra, com conferência antes de confirmar, que casa o que já foi lançado/recebido com a parcela certa e nunca duplica.
+- **Onde:** `convert_budget`/`supersede_previous_budget` (migration), `src/lib/proposal.ts` (`splitPayments`, `stageDates`), lógica pura testada nova para vencimentos, aba Financeiro da obra.
+- **Pronto quando:** aprovar e converter um orçamento mostra todas as parcelas em Contas a receber com valor e vencimento certos, sem lançamento manual.
+- **Feito (08/11):** `create_contract_installments` (migration `20261108000046`) + `src/lib/contract-installments.ts` (puro, testado). A conversão já gera as parcelas; obras existentes têm "Gerar parcelas do orçamento" na Visão geral, com conferência e entradas já lançadas marcadas para não duplicar. Testado no app local: orçamento aprovado e convertido pela tela gerou as 4 parcelas com vencimento no fim das etapas citadas. **Ficou para a R0-2b:** vencimento acompanhar o cronograma e revisão aprovada refazer as parcelas em aberto.
+
+### [ ] R0-2b · Parcelas em aberto acompanham o cronograma e as revisões
+
+- **Por quê:** hoje o vencimento é calculado na geração; se o cronograma muda ou uma revisão é aprovada, as parcelas em aberto não se atualizam.
+- **O que fazer:** guardar em cada parcela a condição de origem (etapa/entrega/aprovação); quando as datas das etapas mudarem (`shift_work_stages`, edição da etapa) recalcular o vencimento das parcelas sem recebimento (o guard `guard_installment_entry` hoje proíbe mudar parcela: liberar só `due_date` de parcela de contrato sem baixa, com registro em work_history); revisão aprovada (`supersede_previous_budget`) refaz valores das parcelas em aberto mantendo as recebidas.
+- **Pronto quando:** arrastar a Alvenaria uma semana para frente muda o vencimento da "1ª medição" sozinho; parcela já recebida nunca muda.
+
+### [ ] R0-3 · "Recebi" em um clique, com recibo na hora
+
+- **Por quê:** receber hoje pede vários campos e o recibo só aparece como sugestão num aviso que some.
+- **O que fazer:** na conta a receber, botão "Recebi" que pergunta:
+  - **Integral ou parcial?** Integral = valor da parcela. Parcial = quanto o cliente pagou agora e **quando vem o restante** (o saldo da parcela fica em aberto com esse novo vencimento; a parcela original é imutável, então o restante vira vencimento próprio sem perder o vínculo com a parcela — cada pagamento gera o seu recibo, número `…-<parcela>-<baixa>` que já existe);
+  - **Em qual conta entrou?** Já vem marcada a **conta do contrato** do cliente (`contracts.bank_account` / `is_contract_default`), sempre confirmando (decidido 08/11);
+  - data = hoje (editável). Ao salvar, entra como entrada no caixa e abre direto o recibo (`/recibos/$id`).
+- **Onde:** Financeiro (contas a receber e aba Financeiro da obra), `register_settlement`/fluxo de baixa existente.
+- **Pronto quando:** da parcela ao recibo aberto em no máximo 2 cliques.
+- **Depende de:** R0-2.
+
+### [ ] R0-4 · Recibo com o avanço financeiro em destaque
+
+- **Por quê:** o recibo já tem total/pago/saldo e uma barra fina; o Guilherme quer que o cliente veja claramente quanto já pagou e quanto falta.
+- **O que fazer:** proposta (a)+(c): barra grande "Pago X% · Falta Y%" com valores e linha do tempo das parcelas (pagas em verde, a deste recibo destacada, próximas em cinza com valor e data). Dados de `buildReceipt` (`summary`, parcelas), sem números novos.
+- **Onde:** `api/src/pdf/receipt-html.ts`, `src/lib/receipt.ts`.
+- **Pronto quando:** recibo gerado mostra o avanço financeiro visual e bate com o Financeiro.
+- **Decidido (08/11):** como no mockup — todas as parcelas do contrato listadas (ex.: 5), as pagas marcadas como pagas (cor + texto), a deste recibo destacada e as demais "a pagar", com a barra pago × falta.
+
+### [ ] R0-5 · Cronograma mostra as parcelas pagas
+
+- **Por quê:** o painel do cronograma já sabe o que foi pago, mas a folha físico-financeira do cliente não marca as parcelas recebidas.
+- **O que fazer:** na folha (`ScheduleSheets`) e na aba Cronograma, parcela recebida marcada como paga (com data), em aberto/vencida diferenciadas; totais pago × a receber.
+- **Onde:** `src/lib/schedule-sheets.ts`, `components/works/schedule-sheets.tsx`.
+- **Pronto quando:** receber uma parcela muda a folha do cronograma sem nenhum outro passo.
+- **Depende de:** R0-2.
+
+### [ ] R0-6 · Reorganizar as abas da obra
+
+- **Por quê:** hoje são 15 abas (Visão geral, Etapas, Checklist, Financeiro, Cronograma, Compras, Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões) que não conversam entre si.
+- **Já validado:** Visão geral, Etapas, Checklist, Financeiro e Cronograma ficam.
+- **Decidido (08/11):** Compras sai como aba e vai para dentro do Financeiro da obra, simplificada como checklist de materiais (ver R0-10).
+- **Papel de cada aba (Guilherme, 08/11):**
+  - **Aditivos:** fica; serve para criar um **orçamento extra** em cima da obra em andamento (R0-11).
+  - **Fotos:** recebe sozinha as fotos que comprovam os itens ticados no checklist (R0-1); nada é enviado duas vezes.
+  - **Relatórios:** "Gerar relatório" de uma data a outra com tudo o que aconteceu no período (R0-12).
+  - **Documentos:** recebe sozinha os documentos que comprovam itens (ex.: ART), além dos que forem anexados direto.
+  - **Contrato:** só para conferir o contrato (como está).
+  - **Diário:** diário da obra, quando quiser registrar o dia, demandas e tarefas.
+  - **Entrega:** registrar a entrega e gerar o **termo de entrega de obra** (R0-13).
+  - **Garantia:** começa sozinha na entrega e é a mesma garantia do menu Garantias (R0-13).
+  - **Decisões:** o Guilherme não entendeu para que serve — explicar e decidir se fica, junta com o Diário ou sai.
+- **Onde:** `src/routes/_authenticated/obras.$id.index.tsx` e componentes de `components/works/`.
+- **Depende do Guilherme:** decidir a aba Decisões depois da explicação; aprovar a ordem final das abas.
+- **Relacionada:** R3-3 (parcela liberada por etapas concluídas) encaixa depois de R0-1 e R0-2.
+
+### [ ] R0-7 · Visão geral: refazer o "Orçado × realizado" (conta e visual)
+
+- **Por quê:** o Guilherme lançou o que recebeu do cliente e a tabela "soma/subtrai errado"; além disso o visual está feio.
+- **Diagnóstico (código atual, `components/works/budget-vs-actual.tsx`):** a tabela mistura três bases sem dizer: "Valor contratado" é preço de **venda**; a coluna "Orçado" é **custo direto** (MO + material, sem estrutura/margem); "Realizado" são só as **saídas pagas** com etapa. O que o cliente pagou (entradas) **não aparece em lugar nenhum**, e a "Diferença" compara gasto com "orçado × avanço" — com avanço desatualizado (ver R0-1) o número parece absurdo. Gastos sem etapa entram no total como uma linha a mais.
+- **O que fazer:** separar em dois blocos claros, com números que fecham à vista:
+  1. **Cliente:** contratado (venda) − recebido = a receber, com barra de avanço financeiro (mesma fonte do recibo e do Financeiro).
+  2. **Custo da obra:** custo previsto − gasto pago = saldo do custo, por etapa, **separado em mão de obra e material** (hoje está tudo somado numa coluna só; `stageCosts` já separa `laborSpent`/`materialSpent` pela categoria da saída), com barra gasto × previsto e avanço físico ao lado; "a executar" para etapa não iniciada; gastos sem etapa destacados como alerta ("ligar à etapa").
+  - Resultado previsto (venda − custo) no fim, vindo de `computeWorkResult`/executive.ts, sem fórmula nova na tela. Visual em cartões/barras no padrão azul + dourado do Painel, legível no celular.
+- **Onde:** `components/works/budget-vs-actual.tsx`, `src/lib/operations.ts` (`stageCosts`, `earnedVariance`), `src/lib/work-composition.ts`; testes da regra nova.
+- **Pronto quando:** na obra da Caroline Zeppelini os números batem com o Financeiro (recebido, a receber, gasto) e cada total é a soma das linhas exibidas.
+- **Caso real (print de 08/11, obra da Caroline):** Responsabilidade técnica — orçado R$ 500,00, avanço 0%, orçado do executado R$ 0,00, realizado R$ 630,64, diferença **+R$ 630,64**. A conta "certa" seria gasto − orçado = **+R$ 130,64 (26% acima)**. Duas causas: (1) a etapa está em 0% embora o serviço tenha sido ticado no checklist (R0-1), e (2) a fórmula compara o gasto com "orçado × avanço", então qualquer gasto antes de o avanço ser lançado aparece inteiro como estouro. **Correção:** por etapa, mostrar orçado × gasto × saldo (estouro só quando o gasto passa do orçado, ou quando a etapa está concluída e gastou mais), com o avanço físico ao lado e só como informação; a comparação "pelo avanço" fica como alerta secundário ("gastou 100% e fez 30%"). Teste com esse caso exato.
+
+### [ ] R0-8 · Aba Etapas com propósito claro (e fácil de editar)
+
+- **Por quê:** a aba está repetitiva e "sem nexo": não fica claro para que serve nem como editar.
+- **Diagnóstico (código atual):** Etapas e Cronograma são **o mesmo componente** (`components/works/schedule.tsx`, `mode="etapas"`/`"cronograma"`) mostrando quase a mesma lista (nome, status, responsável, peso, datas, %). A edição está escondida: clicar no nome ou no lápis abre um formulário longo que mistura avanço, peso, datas planejadas/reais, observações, pendências, executados, próximos serviços, fotos e motivo de reprogramação. Dentro de cada cartão vem ainda o painel de serviços com custos (`stage-services.tsx`), editável por campos soltos que salvam ao sair do campo. O checklist repete os mesmos serviços em outra aba.
+- **Proposta (cada aba com uma pergunta só):**
+  - **Etapas = "o que tem para fazer e quanto já foi feito"**: cada etapa é um cartão que abre a lista dos seus serviços **com o tique do checklist ao lado** (absorve a aba Checklist e resolve a R0-1 no mesmo lugar); cabeçalho do cartão com barra de avanço, status, responsável e, para admin/financeiro, custo previsto × gasto. Botões visíveis "Editar etapa", "Adicionar serviço", "Adicionar item"; edição em formulário curto (nome, responsável, peso, observações).
+  - **Cronograma = "quando"**: só datas (planejado × real, reprogramação com motivo), na grade de semanas que já existe; datas saem do formulário de Etapas.
+  - Pendências/executados/próximos serviços deixam de ser textos livres da etapa: viram itens do checklist e Pendências (`work_issues`), que já existem.
+- **Onde:** `components/works/schedule.tsx`, `stage-services.tsx`, `checklist.tsx`, `src/routes/_authenticated/obras.$id.index.tsx`.
+- **Pronto quando:** dá para dizer em uma frase o que cada aba faz; editar etapa, serviço e avanço tem botão visível; nada aparece duplicado entre Etapas, Checklist e Cronograma.
+- **Decidido (08/11):** juntar Etapas e Checklist numa aba só. Fazer junto com a R0-1.
+
+### [ ] R0-9 · Cronograma interativo da obra (o gráfico do PDF, mas vivo)
+
+- **Por quê:** a aba mostra no topo uma miniatura do PDF (bonita, mas parada) e embaixo repete a lista de etapas com uma "edição" que não edita nada útil.
+- **Diagnóstico (código atual):** aba Cronograma = `SchedulePlanning` (miniatura `ScaledSheets` do PDF, em escala reduzida) + a mesma lista do `Schedule` em `mode="cronograma"`; datas só mudam pelo formulário longo da etapa.
+- **Decisão do Guilherme (08/11):** a aba Cronograma da obra usa **o mesmo cronograma do painel** (`/cronogramas/$id`, `components/schedules/schedule-dashboard.tsx`: indicadores, grade de 10 semanas, pagamentos, materiais do cliente, revisões, "Lançar avanço"), que ele aprovou ("tá bonito, tudo certinho"). Uma tela só, mostrada nos dois lugares — sem segunda versão.
+- **O que fazer:** trocar a miniatura + lista pelo painel do cronograma, e evoluí-lo para um **gráfico interativo** com o mesmo visual físico-financeiro do PDF (`.cr-*`, azul/dourado):
+  - linhas = etapas, colunas = semanas; **rola na horizontal** e abre posicionado em **hoje** (linha vertical "hoje"); zoom semana/mês;
+  - cada barra mostra planejado × realizado (preenchimento = avanço, que vem do checklist, R0-1) e fica vermelha quando atrasada;
+  - **arrastar a barra** muda início/fim, **puxar a ponta** muda a duração; ao soltar pede o motivo e grava como uma revisão do cronograma (`shift_work_stages`); arrastar uma etapa oferece empurrar as seguintes;
+  - clicar na barra abre painel lateral curto (datas planejadas/reais, responsável, avanço, "ver serviços" → aba Etapas);
+  - **marcações** na linha do tempo: marcos (ex.: "entrega da bancada", "visita do cliente", "concretagem"), com data, nome e cor — tabela nova `work_milestones` (GRANT explícito, auditada em work_history), aparecem **sempre** na folha PDF do cliente (decisão do Guilherme, 08/11: não precisa ocultar);
+  - linhas de baixo: parcelas (paga/em aberto/vencida, R0-5) e entregas de material do cliente;
+  - botão "PDF do cliente" continua gerando a folha atual.
+  - A lista repetida de etapas sai desta aba (fica só em Etapas, R0-8).
+- **Onde:** `components/schedules/schedule-dashboard.tsx` (reaproveitado dentro da aba da obra), `buildScheduleSheets`/`schedule-dashboard.ts` (regras puras testadas), `schedule-planning.tsx`, `schedule.tsx`, migration de `work_milestones`. Primeiro passo (rápido, pode vir antes de tudo): só colocar o painel do cronograma na aba da obra; depois arrastar e marcos.
+- **Pronto quando:** dá para rolar o cronograma, ver onde a obra está hoje, arrastar uma etapa para outra semana (fica registrado com motivo) e criar um marco, tudo sem abrir formulário longo; funciona no celular (rolagem com o dedo, edição por toque longo).
+- **Depende de:** R0-5 (parcelas pagas) e R0-1 (avanço) para mostrar tudo; o arrastar e os marcos podem vir antes.
+
+### [ ] R0-10 · Compras vira checklist de materiais (dentro do Financeiro), com orçado × gasto × saldo
+
+- **Por quê:** a aba Compras (pedido → chegada → pagamento) não ficou clara. O Guilherme quer a lista dos materiais que foram orçados, etapa por etapa, para ir ticando o que comprou ou o que não precisou, e saber se o material orçado foi mesmo usado.
+- **O que fazer:**
+  - a lista nasce do orçamento aprovado: cada material de cada serviço (snapshot `budget_items.materials`: nome, unidade, quantidade, custo) vira uma linha da obra agrupada por etapa; materiais "cliente fornece" aparecem marcados assim e não entram no custo; nova revisão aprovada re-sincroniza sem perder o que já foi marcado (mesma ideia de `sync_budget_stage_services`);
+  - cada linha mostra quantidade comprada × orçada (ex.: **3 de 5 rl**) e continua "a comprar" até completar; não existe estado "não precisou" (decidido 08/11): o que não foi comprado simplesmente fica como **saldo positivo** daquele material/etapa, e quem comprou mais fica com saldo negativo; a linha pode ser encerrada ("compra concluída") para parar de aparecer como pendente;
+  - **"Comprei"** pergunta: quantidade, **"pagou o valor cotado no orçamento ou valor diferente?"** (diferente → informa o valor pago), fornecedor e conta; já lança a saída no Financeiro, categoria Materiais, ligada à etapa e ao material — o gasto é informado num lugar só, nunca duas vezes; pagamento a prazo continua possível (vira conta a pagar);
+  - **compra a mais depois** (ex.: precisou de mais um rolo): "Comprei" de novo na mesma linha ou "+ Material" escolhendo a etapa; entra naquela etapa e abate do saldo dela;
+  - por material, por etapa e no total: **orçado × gasto × saldo** (positivo = economia, negativo = gastou a mais), com destaque para material comprado sem estar no orçamento;
+  - aparece como seção "Compras de material" dentro da aba Financeiro da obra; a aba Compras sai.
+- **Onde:** reaproveitar `purchase_orders`/`purchase_lines` (já têm `material_key`) e `financial_entries` (`stage_id`, categoria "Materiais"); tabela nova ou colunas para o estado da linha (a comprar/comprei/não precisou) com GRANT explícito, RLS `can_see_costs` e auditoria; regra pura testada (`src/lib/material-checklist.ts`) para orçado × gasto × saldo; `components/works/purchases.tsx`, `components/works/finance.tsx`.
+- **Pronto quando:** na obra da Caroline a lista mostra os materiais orçados por etapa (ex.: Proteção e sinalização: rolos de lona, fitas), ticar "comprei" lança a saída no Financeiro e o saldo do material da etapa muda na hora; "não precisou" aparece como economia.
+- **Todas as decisões tomadas (08/11) — pronta para começar.**
+
+### [ ] R0-11 · Aditivo = orçamento extra dentro da obra
+
+- **Por quê:** o aditivo hoje (`work_extras`) é só descrição + custo + preço + dias; o Guilherme quer montar um orçamento extra de verdade em cima da obra em andamento.
+- **O que fazer:** na aba Aditivos, "Novo aditivo" abre o mesmo editor de orçamento (catálogo, serviços, materiais, precificação `custo_direto`, parcelas), já ligado à obra e ao cliente, numerado como aditivo do orçamento original (ex.: `ORC-2026-0042-A1`). Aprovado: entra como `work_extras` aprovado (imutável), cria os serviços/etapas novos (itens do checklist), os materiais (R0-10), as parcelas a receber (R0-2) e o PDF do aditivo para o cliente; o cronograma recebe as etapas novas. Funciona mesmo com contrato assinado (é o caminho que a regra atual já indica: "use extras instead").
+- **Onde:** budgets (tipo/vínculo de aditivo), `work_extras`, `convert_budget`/`sync_budget_stage_services`, `components/works/result.tsx`, API do PDF.
+- **Pronto quando:** um aditivo montado na obra da Caroline, ao ser aprovado, aparece no checklist, no cronograma, nas compras e nas contas a receber sem nenhum lançamento à mão.
+- **Depende de:** R0-2, R0-1, R0-10.
+
+### [ ] R0-12 · Relatório da obra por período, montado sozinho
+
+- **Por quê:** o relatório de evolução atual (`/obras/$id/relatorio/pdf`) filtra registros e etapas por data, mas não junta o que aconteceu no período.
+- **O que fazer:** "Gerar relatório" com **de / até** (padrão: início da obra até hoje). Para cada etapa que avançou no período: itens concluídos com as fotos/documentos que comprovaram cada um (R0-1), avanço antes → depois; no mesmo período: pagamentos recebidos (parcelas), materiais comprados/recebidos (R0-10), entregas do cliente, marcos (R0-9), aditivos aprovados, pendências abertas/resolvidas e diário. Versão para o cliente sem custos (só avanço, fotos e pagamentos dele) e versão interna com custos (admin/financeiro).
+- **Onde:** regra pura testada nova (`src/lib/work-report.ts`), `obras.$id.relatorio.pdf.tsx`, aba Relatórios.
+- **Pronto quando:** relatório de 5 dias da obra da Caroline mostra exatamente os itens ticados, as fotos deles e os pagamentos daquele período.
+- **Depende de:** R0-1 (comprovação), R0-10, R0-2.
+
+### [ ] R0-13 · Entrega com termo de entrega e garantia ligada ao menu
+
+- **Por quê:** a entrega hoje é uma lista de registros ("Checklist de entrega"); o Guilherme quer registrar a entrega e já gerar o termo, com a garantia começando sozinha.
+- **O que fazer:**
+  - aba Entrega pergunta: **a obra foi entregue? que dia? teve item que precisou ser refeito?** (lista de itens refeitos/pendentes com prazo) → gera o **Termo de entrega de obra** em PDF (mesma identidade do contrato, código `TE-<ano>-<0000>`, assinatura eletrônica contratante/contratada) — modelo para aprovação na página de visualização;
+  - ao registrar a entrega: obra `concluída`, data de término real e **garantia iniciada** (12 meses padrão, editável) — o fluxo "Registrar entrega" da garantia já existe e passa a ser chamado daqui;
+  - aba Garantia: linha do tempo em meses (início, hoje, fim, chamados e visitas) e edição das datas;
+  - **mesma garantia do menu Garantias:** já é a mesma tabela (`warranties`), então mudar lá muda aqui e vice-versa; garantir que a aba e o menu leem e editam o mesmo registro e conferir com teste.
+- **Onde:** `components/works/records.tsx` (entrega), `components/warranty/*`, `src/lib/warranty.ts`, API do PDF (`api/src/pdf/`, novo template), migration para o registro da entrega/termo (GRANT explícito, auditoria).
+- **Pronto quando:** registrar a entrega da obra gera o termo, conclui a obra e mostra a garantia correndo tanto na aba quanto no menu Garantias.
+- **Depende do Guilherme:** aprovar o modelo do termo de entrega.
+
+---
+
 ## Fase 1 — Segurança e confiabilidade (esta semana)
 
 ### [ ] R1-1 · E-mail de envio (SMTP)

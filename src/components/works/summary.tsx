@@ -6,6 +6,7 @@ import { fmtBRL, fmtNum, fmtDate } from "@/lib/format";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Installments } from "./installments";
+import { ContractInstallmentsButton } from "./contract-installments";
 import { supabase } from "@/integrations/supabase/client";
 import { splitPayments } from "@/lib/pricing";
 import { workComposition, type WorkIndicator } from "@/lib/work-composition";
@@ -187,9 +188,16 @@ export function WorkSummaryPanel({ workId }: { workId: string }) {
             {fmtDate(s.work.planned_end)}
           </p>
         </div>
-        {groups.length === 0 && s.balance.receivable > 0 && (
-          <Button onClick={() => setOpen(true)}>Gerar parcelas do contrato</Button>
-        )}
+        <ContractInstallmentsButton
+          workId={workId}
+          fallback={
+            groups.length === 0 && s.balance.receivable > 0 ? (
+              <Button type="button" onClick={() => setOpen(true)}>
+                Gerar parcelas do contrato
+              </Button>
+            ) : null
+          }
+        />
       </div>
       {operational && (
         <WorkSituation
