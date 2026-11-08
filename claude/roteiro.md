@@ -14,7 +14,7 @@ Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança 
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
 Princípio (Guilherme, 08/11): **a plataforma inteira tem que se conversar** — orçamento, contrato, financeiro, cronograma, etapas e compras; mexeu em um, os outros atualizam. Nada é digitado duas vezes.
 
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-6 (só a R0-6 ainda espera a revisão das outras abas).
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-12 → R0-11 → R0-13 → R0-6 (esperam o Guilherme: modelo do termo de entrega na R0-13 e a aba Decisões na R0-6).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -26,7 +26,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Depende do Guilherme:**
   1. ~~Serviço só "feito / não feito" ou parcial?~~ **Respondido (08/11): só feito / não feito** (ticou = 100%, desmarcou = 0%); o % manual da aba Etapas vira só leitura para serviços.
   2. ~~Itens avulsos contam?~~ **Respondido (08/11): contam, no avanço da própria etapa.** Criar um item novo numa etapa 100% baixa o % até ele ser ticado (ex.: "adicionar tomada na parede do quarto"). Regra: dentro da etapa o avanço é por item (cada item vale igual: itens feitos ÷ itens da etapa, mostrado como "5 de 6"); o peso da etapa na obra continua pelo valor (`valueWeights`). Substitui o `servicesProgress` ponderado por valor dentro da etapa.
-  3. ~~A equipe pode ticar?~~ **Respondido (08/11): pode** (hoje só o Guilherme usa; restringir acessos da equipe fica para depois). Ao ticar, o app oferece **anexar foto ou documento** como comprovação (opcional): foto vira registro da etapa (`work_records` com `stage_id`, aparece na aba Fotos/galeria sem duplicar), documento (ex.: ART/RRT da responsabilidade técnica) vai para os documentos da obra (`jmg-documents`); o item mostra o comprovante e quem ticou/quando.
+  3. ~~A equipe pode ticar?~~ **Respondido (08/11): pode** (hoje só o Guilherme usa; restringir acessos da equipe fica para depois). Ao ticar, **é obrigatório anexar foto ou documento** como comprovação (decidido 08/11, segunda conversa: "para dar como feito precisa necessariamente de uma foto ou documento"; ex.: ART emitida → envia o documento; demolição finalizada → manda as fotos): foto vira registro da etapa (`work_records` com `stage_id`, aparece na aba Fotos/galeria sem duplicar), documento (ex.: ART/RRT da responsabilidade técnica) vai para os documentos da obra (`jmg-documents`); o item mostra o comprovante e quem ticou/quando.
 - **Todas as decisões tomadas — pronta para começar.**
 
 ### [ ] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
@@ -68,9 +68,18 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Por quê:** hoje são 15 abas (Visão geral, Etapas, Checklist, Financeiro, Cronograma, Compras, Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões) que não conversam entre si.
 - **Já validado:** Visão geral, Etapas, Checklist, Financeiro e Cronograma ficam.
 - **Decidido (08/11):** Compras sai como aba e vai para dentro do Financeiro da obra, simplificada como checklist de materiais (ver R0-10).
-- **Em aberto:** as demais abas (Aditivos, Fotos, Relatórios, Documentos, Contrato, Diário, Entrega, Garantia, Decisões), que o Guilherme ainda vai passar.
+- **Papel de cada aba (Guilherme, 08/11):**
+  - **Aditivos:** fica; serve para criar um **orçamento extra** em cima da obra em andamento (R0-11).
+  - **Fotos:** recebe sozinha as fotos que comprovam os itens ticados no checklist (R0-1); nada é enviado duas vezes.
+  - **Relatórios:** "Gerar relatório" de uma data a outra com tudo o que aconteceu no período (R0-12).
+  - **Documentos:** recebe sozinha os documentos que comprovam itens (ex.: ART), além dos que forem anexados direto.
+  - **Contrato:** só para conferir o contrato (como está).
+  - **Diário:** diário da obra, quando quiser registrar o dia, demandas e tarefas.
+  - **Entrega:** registrar a entrega e gerar o **termo de entrega de obra** (R0-13).
+  - **Garantia:** começa sozinha na entrega e é a mesma garantia do menu Garantias (R0-13).
+  - **Decisões:** o Guilherme não entendeu para que serve — explicar e decidir se fica, junta com o Diário ou sai.
 - **Onde:** `src/routes/_authenticated/obras.$id.index.tsx` e componentes de `components/works/`.
-- **Depende do Guilherme:** terminar de passar as abas.
+- **Depende do Guilherme:** decidir a aba Decisões depois da explicação; aprovar a ordem final das abas.
 - **Relacionada:** R3-3 (parcela liberada por etapas concluídas) encaixa depois de R0-1 e R0-2.
 
 ### [ ] R0-7 · Visão geral: refazer o "Orçado × realizado" (conta e visual)
@@ -128,6 +137,34 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Onde:** reaproveitar `purchase_orders`/`purchase_lines` (já têm `material_key`) e `financial_entries` (`stage_id`, categoria "Materiais"); tabela nova ou colunas para o estado da linha (a comprar/comprei/não precisou) com GRANT explícito, RLS `can_see_costs` e auditoria; regra pura testada (`src/lib/material-checklist.ts`) para orçado × gasto × saldo; `components/works/purchases.tsx`, `components/works/finance.tsx`.
 - **Pronto quando:** na obra da Caroline a lista mostra os materiais orçados por etapa (ex.: Proteção e sinalização: rolos de lona, fitas), ticar "comprei" lança a saída no Financeiro e o saldo do material da etapa muda na hora; "não precisou" aparece como economia.
 - **Todas as decisões tomadas (08/11) — pronta para começar.**
+
+### [ ] R0-11 · Aditivo = orçamento extra dentro da obra
+
+- **Por quê:** o aditivo hoje (`work_extras`) é só descrição + custo + preço + dias; o Guilherme quer montar um orçamento extra de verdade em cima da obra em andamento.
+- **O que fazer:** na aba Aditivos, "Novo aditivo" abre o mesmo editor de orçamento (catálogo, serviços, materiais, precificação `custo_direto`, parcelas), já ligado à obra e ao cliente, numerado como aditivo do orçamento original (ex.: `ORC-2026-0042-A1`). Aprovado: entra como `work_extras` aprovado (imutável), cria os serviços/etapas novos (itens do checklist), os materiais (R0-10), as parcelas a receber (R0-2) e o PDF do aditivo para o cliente; o cronograma recebe as etapas novas. Funciona mesmo com contrato assinado (é o caminho que a regra atual já indica: "use extras instead").
+- **Onde:** budgets (tipo/vínculo de aditivo), `work_extras`, `convert_budget`/`sync_budget_stage_services`, `components/works/result.tsx`, API do PDF.
+- **Pronto quando:** um aditivo montado na obra da Caroline, ao ser aprovado, aparece no checklist, no cronograma, nas compras e nas contas a receber sem nenhum lançamento à mão.
+- **Depende de:** R0-2, R0-1, R0-10.
+
+### [ ] R0-12 · Relatório da obra por período, montado sozinho
+
+- **Por quê:** o relatório de evolução atual (`/obras/$id/relatorio/pdf`) filtra registros e etapas por data, mas não junta o que aconteceu no período.
+- **O que fazer:** "Gerar relatório" com **de / até** (padrão: início da obra até hoje). Para cada etapa que avançou no período: itens concluídos com as fotos/documentos que comprovaram cada um (R0-1), avanço antes → depois; no mesmo período: pagamentos recebidos (parcelas), materiais comprados/recebidos (R0-10), entregas do cliente, marcos (R0-9), aditivos aprovados, pendências abertas/resolvidas e diário. Versão para o cliente sem custos (só avanço, fotos e pagamentos dele) e versão interna com custos (admin/financeiro).
+- **Onde:** regra pura testada nova (`src/lib/work-report.ts`), `obras.$id.relatorio.pdf.tsx`, aba Relatórios.
+- **Pronto quando:** relatório de 5 dias da obra da Caroline mostra exatamente os itens ticados, as fotos deles e os pagamentos daquele período.
+- **Depende de:** R0-1 (comprovação), R0-10, R0-2.
+
+### [ ] R0-13 · Entrega com termo de entrega e garantia ligada ao menu
+
+- **Por quê:** a entrega hoje é uma lista de registros ("Checklist de entrega"); o Guilherme quer registrar a entrega e já gerar o termo, com a garantia começando sozinha.
+- **O que fazer:**
+  - aba Entrega pergunta: **a obra foi entregue? que dia? teve item que precisou ser refeito?** (lista de itens refeitos/pendentes com prazo) → gera o **Termo de entrega de obra** em PDF (mesma identidade do contrato, código `TE-<ano>-<0000>`, assinatura eletrônica contratante/contratada) — modelo para aprovação na página de visualização;
+  - ao registrar a entrega: obra `concluída`, data de término real e **garantia iniciada** (12 meses padrão, editável) — o fluxo "Registrar entrega" da garantia já existe e passa a ser chamado daqui;
+  - aba Garantia: linha do tempo em meses (início, hoje, fim, chamados e visitas) e edição das datas;
+  - **mesma garantia do menu Garantias:** já é a mesma tabela (`warranties`), então mudar lá muda aqui e vice-versa; garantir que a aba e o menu leem e editam o mesmo registro e conferir com teste.
+- **Onde:** `components/works/records.tsx` (entrega), `components/warranty/*`, `src/lib/warranty.ts`, API do PDF (`api/src/pdf/`, novo template), migration para o registro da entrega/termo (GRANT explícito, auditoria).
+- **Pronto quando:** registrar a entrega da obra gera o termo, conclui a obra e mostra a garantia correndo tanto na aba quanto no menu Garantias.
+- **Depende do Guilherme:** aprovar o modelo do termo de entrega.
 
 ---
 
