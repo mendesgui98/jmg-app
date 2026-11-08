@@ -2837,6 +2837,10 @@ export type Database = {
         Args: { _data: Json; _request_id: string };
         Returns: string;
       };
+      create_contract_installments: {
+        Args: { _request_id: string; _rows: Json; _work_id: string };
+        Returns: string;
+      };
       create_financial_installments: {
         Args: {
           _category: string;

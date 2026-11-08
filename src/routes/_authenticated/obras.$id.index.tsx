@@ -2,7 +2,27 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useQuery, useSuspenseQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { ChevronLeft, FileDown, Settings } from "lucide-react";
+import {
+  BookOpen,
+  Camera,
+  CalendarRange,
+  ChevronLeft,
+  FileDown,
+  FileSignature,
+  FileText,
+  FilePlus2,
+  FolderOpen,
+  Gavel,
+  KeyRound,
+  LayoutDashboard,
+  ListChecks,
+  Settings,
+  ShieldCheck,
+  ShoppingCart,
+  Layers,
+  Wallet,
+  type LucideIcon,
+} from "lucide-react";
 import { IconBubble } from "@/components/kpi";
 import { panelClass } from "@/lib/surface";
 import { cn } from "@/lib/utils";
@@ -30,6 +50,25 @@ import { StagePhotos } from "@/components/works/photos";
 import { WorkSituation } from "@/components/works/situation";
 import { WorkResult } from "@/components/works/result";
 import { WORK_STATUS_LABEL, workStatusLabel } from "@/lib/work-status";
+/** Abas da obra, na ordem da barra; `costs` = só admin/financeiro. */
+const WORK_TABS: { value: string; label: string; icon: LucideIcon; costs?: boolean }[] = [
+  { value: "resumo", label: "Visão geral", icon: LayoutDashboard },
+  { value: "etapas", label: "Etapas", icon: Layers },
+  { value: "checklist", label: "Checklist", icon: ListChecks },
+  { value: "financeiro", label: "Financeiro", icon: Wallet, costs: true },
+  { value: "cronograma", label: "Cronograma", icon: CalendarRange },
+  { value: "compras", label: "Compras", icon: ShoppingCart, costs: true },
+  { value: "resultado", label: "Aditivos", icon: FilePlus2, costs: true },
+  { value: "fotos", label: "Fotos", icon: Camera },
+  { value: "relatorios", label: "Relatórios", icon: FileText },
+  { value: "documento", label: "Documentos", icon: FolderOpen },
+  { value: "contrato", label: "Contrato", icon: FileSignature, costs: true },
+  { value: "diario", label: "Diário", icon: BookOpen },
+  { value: "entrega", label: "Entrega", icon: KeyRound },
+  { value: "garantia", label: "Garantia", icon: ShieldCheck },
+  { value: "decisao", label: "Decisões", icon: Gavel },
+];
+
 export const Route = createFileRoute("/_authenticated/obras/$id/")({
   validateSearch: (
     s: Record<string, unknown>,
@@ -164,26 +203,22 @@ function Work() {
           navigate({ to: "/obras/$id", params: { id }, search: (old) => ({ ...old, tab }) })
         }
       >
-        <TabsList className="mb-5 flex h-auto flex-wrap justify-start gap-1">
-          <TabsTrigger value="resumo">Visão geral</TabsTrigger>
-          <TabsTrigger value="etapas">Etapas</TabsTrigger>
-          <TabsTrigger value="checklist">Checklist</TabsTrigger>
-          {me?.canSeeCosts && <TabsTrigger value="financeiro">Financeiro</TabsTrigger>}
-          <TabsTrigger value="cronograma">Cronograma</TabsTrigger>
-          {me?.canSeeCosts && (
-            <>
-              <TabsTrigger value="compras">Compras</TabsTrigger>
-              <TabsTrigger value="resultado">Aditivos</TabsTrigger>
-            </>
+        <TabsList
+          aria-label="Seções da obra"
+          className="mb-5 grid h-auto w-full grid-cols-[repeat(auto-fill,minmax(6.75rem,1fr))] gap-1.5 overflow-visible rounded-2xl border border-border/70 bg-card p-2 shadow-sm"
+        >
+          {WORK_TABS.filter((t) => !t.costs || me?.canSeeCosts).map(
+            ({ value, label, icon: Icon }) => (
+              <TabsTrigger
+                key={value}
+                value={value}
+                className="h-auto min-h-14 flex-col gap-1 whitespace-normal rounded-xl border border-border/60 bg-background px-2 py-2 text-center text-xs leading-tight text-muted-foreground hover:border-primary/40 hover:bg-accent/60 data-[state=active]:border-primary data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-md sm:text-[13px]"
+              >
+                <Icon aria-hidden className="h-4 w-4 shrink-0" />
+                {label}
+              </TabsTrigger>
+            ),
           )}
-          <TabsTrigger value="fotos">Fotos</TabsTrigger>
-          <TabsTrigger value="relatorios">Relatórios</TabsTrigger>
-          <TabsTrigger value="documento">Documentos</TabsTrigger>
-          {me?.canSeeCosts && <TabsTrigger value="contrato">Contrato</TabsTrigger>}
-          <TabsTrigger value="diario">Diário</TabsTrigger>
-          <TabsTrigger value="entrega">Entrega</TabsTrigger>
-          <TabsTrigger value="garantia">Garantia</TabsTrigger>
-          <TabsTrigger value="decisao">Decisões</TabsTrigger>
         </TabsList>
         <TabsContent value="resumo">
           {me?.canSeeCosts ? (

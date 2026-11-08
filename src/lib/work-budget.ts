@@ -4,6 +4,14 @@ import { emptyParams, computeBudget, directContractBase } from "./pricing";
 import { budgetStageServices, stageCosts } from "./operations";
 import { valueWeights } from "./work-progress";
 import { syncStageProgress } from "./stage-services-data";
+import { businessDate } from "./dashboard-math";
+import { stageDates } from "./proposal";
+import {
+  contractInstallmentPlan,
+  matchExisting,
+  stageWindows,
+  type PlannedInstallment,
+} from "./contract-installments";
 
 /** Converte orçamento aprovado em obra levando, para cada etapa, os serviços com o custo
  * previsto de mão de obra e materiais (calculado por computeBudget). */
@@ -16,6 +24,84 @@ export async function convertBudgetToWork(budgetId: string) {
   });
   if (r.error) throw r.error;
   await applyValueWeights(r.data);
+  // Parcelas do orçamento já entram como contas a receber (R0-2). Se não der (condições que não
+  // somam 100%, sem permissão), a obra é criada do mesmo jeito e a Visão geral oferece o botão.
+  try {
+    const draft = await contractInstallmentDraft(r.data);
+    if (draft.plan.length && !draft.generated && !draft.existing.length)
+      await createContractInstallments(r.data, draft.plan, crypto.randomUUID());
+  } catch (e) {
+    console.warn("Parcelas do contrato não geradas na conversão.", e);
+  }
+  return r.data;
+}
+
+export type InstallmentDraftRow = PlannedInstallment & { matchedEntryId: string | null };
+
+/**
+ * Parcelas do contrato de uma obra vinda de orçamento: valores e vencimentos das condições de
+ * pagamento (datas das etapas da obra) e as entradas já lançadas à mão que batem com alguma.
+ */
+export async function contractInstallmentDraft(workId: string) {
+  const wr = await supabase.from("work_registry").select("*").eq("id", workId).single();
+  if (wr.error) throw wr.error;
+  const [groups, entries, stages] = await Promise.all([
+    supabase.from("financial_groups").select("id").eq("work_id", workId).eq("source", "contract"),
+    supabase
+      .from("financial_entries")
+      .select("id, amount, description, due_date, group_id")
+      .eq("work_id", workId)
+      .eq("direction", "entrada")
+      .eq("canceled", false),
+    supabase
+      .from("work_stages")
+      .select("budget_section_id, planned_start, planned_end")
+      .eq("work_id", workId)
+      .eq("removed", false),
+  ]);
+  if (groups.error) throw groups.error;
+  if (entries.error) throw entries.error;
+  if (stages.error) throw stages.error;
+  const generated = groups.data.length > 0;
+  const existing = entries.data.filter((e) => !e.group_id);
+  const empty = { generated, existing, plan: [] as InstallmentDraftRow[], total: 0, terms: 0 };
+  if (!wr.data.linked_budget_id) return empty;
+  const b = await loadBudget(wr.data.linked_budget_id);
+  const total = computeBudget(b.items, b.params, b.budget.general_discount).saleNet;
+  const fallback = b.budget.start_date ? stageDates(b.budget.start_date, b.sections) : [];
+  const windows = stageWindows(b.sections, stages.data, fallback);
+  const ends = windows.map((w) => w.end).filter((d): d is string => !!d);
+  const plan = contractInstallmentPlan(total, b.terms, {
+    approval: (b.budget.approval_date ?? businessDate()).slice(0, 10),
+    stages: windows,
+    end: wr.data.planned_end ?? (ends.length ? [...ends].sort().at(-1)! : null),
+  });
+  const matched = matchExisting(plan, existing);
+  return {
+    ...empty,
+    total,
+    terms: b.terms.length,
+    plan: plan.map((p, i) => ({ ...p, matchedEntryId: matched[i] ?? null })),
+  };
+}
+
+/** Grava as parcelas do contrato como contas a receber da obra (uma geração por obra). */
+export async function createContractInstallments(
+  workId: string,
+  rows: Pick<PlannedInstallment, "description" | "amount" | "due_date" | "when">[],
+  requestId: string,
+) {
+  const r = await supabase.rpc("create_contract_installments", {
+    _request_id: requestId,
+    _work_id: workId,
+    _rows: rows.map((row) => ({
+      description: row.description,
+      amount: row.amount,
+      due_date: row.due_date,
+      notes: row.when || null,
+    })),
+  });
+  if (r.error) throw r.error;
   return r.data;
 }
 /** Revisão aprovada: atualiza os serviços das etapas da obra ligada (custo de MO e materiais por
