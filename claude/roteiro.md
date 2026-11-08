@@ -76,7 +76,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
   - Resultado previsto (venda − custo) no fim, vindo de `computeWorkResult`/executive.ts, sem fórmula nova na tela. Visual em cartões/barras no padrão azul + dourado do Painel, legível no celular.
 - **Onde:** `components/works/budget-vs-actual.tsx`, `src/lib/operations.ts` (`stageCosts`, `earnedVariance`), `src/lib/work-composition.ts`; testes da regra nova.
 - **Pronto quando:** na obra da Caroline Zeppelini os números batem com o Financeiro (recebido, a receber, gasto) e cada total é a soma das linhas exibidas.
-- **Depende do Guilherme:** print ou os números que viu errados na obra da Caroline, para reproduzir o erro exato.
+- **Caso real (print de 08/11, obra da Caroline):** Responsabilidade técnica — orçado R$ 500,00, avanço 0%, orçado do executado R$ 0,00, realizado R$ 630,64, diferença **+R$ 630,64**. A conta "certa" seria gasto − orçado = **+R$ 130,64 (26% acima)**. Duas causas: (1) a etapa está em 0% embora o serviço tenha sido ticado no checklist (R0-1), e (2) a fórmula compara o gasto com "orçado × avanço", então qualquer gasto antes de o avanço ser lançado aparece inteiro como estouro. **Correção:** por etapa, mostrar orçado × gasto × saldo (estouro só quando o gasto passa do orçado, ou quando a etapa está concluída e gastou mais), com o avanço físico ao lado e só como informação; a comparação "pelo avanço" fica como alerta secundário ("gastou 100% e fez 30%"). Teste com esse caso exato.
 
 ### [ ] R0-8 · Aba Etapas com propósito claro (e fácil de editar)
 
