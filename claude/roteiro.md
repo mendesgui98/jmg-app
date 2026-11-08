@@ -12,7 +12,9 @@ Legenda: **Depende do Guilherme** = precisa de uma informação, conta ou decis�
 
 Objetivo: as abas da obra conversarem entre si — marcou no checklist, avança etapa e cronograma;
 o orçamento já traz o que o cliente vai pagar; recebeu, gera recibo e atualiza o cronograma.
-Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-6 (R0-1 e R0-8 esperam as decisões).
+Princípio (Guilherme, 08/11): **a plataforma inteira tem que se conversar** — orçamento, contrato, financeiro, cronograma, etapas e compras; mexeu em um, os outros atualizam. Nada é digitado duas vezes.
+
+Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas) → R0-10 → R0-9 → R0-6 (só a R0-6 ainda espera a revisão das outras abas).
 
 ### [ ] R0-1 · Checklist marcado avança a etapa e o cronograma
 
@@ -23,20 +25,24 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Pronto quando:** ticar um item no checklist muda o % da etapa na aba Etapas e no Cronograma sem nenhum outro passo, com teste cobrindo marcar/desmarcar; o % do cabeçalho é sempre a soma visível das barras.
 - **Depende do Guilherme:**
   1. ~~Serviço só "feito / não feito" ou parcial?~~ **Respondido (08/11): só feito / não feito** (ticou = 100%, desmarcou = 0%); o % manual da aba Etapas vira só leitura para serviços.
-  2. Itens avulsos do checklist (sem serviço) contam no avanço ou são só lembrete?
-  3. A equipe de campo pode ticar (e com isso mover o avanço) ou só admin/financeiro?
+  2. ~~Itens avulsos contam?~~ **Respondido (08/11): contam, no avanço da própria etapa.** Criar um item novo numa etapa 100% baixa o % até ele ser ticado (ex.: "adicionar tomada na parede do quarto"). Regra: dentro da etapa o avanço é por item (cada item vale igual: itens feitos ÷ itens da etapa, mostrado como "5 de 6"); o peso da etapa na obra continua pelo valor (`valueWeights`). Substitui o `servicesProgress` ponderado por valor dentro da etapa.
+  3. ~~A equipe pode ticar?~~ **Respondido (08/11): pode** (hoje só o Guilherme usa; restringir acessos da equipe fica para depois). Ao ticar, o app oferece **anexar foto ou documento** como comprovação (opcional): foto vira registro da etapa (`work_records` com `stage_id`, aparece na aba Fotos/galeria sem duplicar), documento (ex.: ART/RRT da responsabilidade técnica) vai para os documentos da obra (`jmg-documents`); o item mostra o comprovante e quem ticou/quando.
+- **Todas as decisões tomadas — pronta para começar.**
 
 ### [ ] R0-2 · Parcelas do orçamento viram contas a receber automaticamente
 
 - **Por quê:** a conversão do orçamento aprovado cria etapas e serviços, mas não as parcelas; hoje cada uma é lançada à mão no Financeiro.
-- **O que fazer:** ao converter o orçamento em obra, cada parcela de `payment_terms` vira uma conta a receber (`financial_entries` entrada) da obra, valores em centavos por `splitPayments`, vencimento pela data combinada ou pelo início da etapa ligada no cronograma (`budget_section_dates`). Cronograma mudou → vencimento das parcelas em aberto acompanha; nova revisão aprovada → refaz as parcelas em aberto, recebidas ficam intactas. Obras já existentes: botão "Gerar parcelas do orçamento" que não duplica o que já foi lançado.
+- **O que fazer:** ao converter o orçamento em obra, cada parcela de `payment_terms` vira uma conta a receber (`financial_entries` entrada) da obra, valores em centavos por `splitPayments`, vencimento pela data combinada ou pelo início da etapa ligada no cronograma (`budget_section_dates`). Cronograma mudou → vencimento das parcelas em aberto acompanha; nova revisão aprovada → refaz as parcelas em aberto, recebidas ficam intactas. Obras já existentes (**decidido 08/11: sim, a partir do orçamento**): botão "Gerar parcelas do orçamento" na obra, com conferência antes de confirmar, que casa o que já foi lançado/recebido com a parcela certa e nunca duplica.
 - **Onde:** `convert_budget`/`supersede_previous_budget` (migration), `src/lib/proposal.ts` (`splitPayments`, `stageDates`), lógica pura testada nova para vencimentos, aba Financeiro da obra.
 - **Pronto quando:** aprovar e converter um orçamento mostra todas as parcelas em Contas a receber com valor e vencimento certos, sem lançamento manual.
 
 ### [ ] R0-3 · "Recebi" em um clique, com recibo na hora
 
 - **Por quê:** receber hoje pede vários campos e o recibo só aparece como sugestão num aviso que some.
-- **O que fazer:** na conta a receber, botão "Recebi" com valor e data de hoje já preenchidos (só escolher a conta); ao salvar, entra como entrada no caixa e abre direto o recibo (`/recibos/$id`).
+- **O que fazer:** na conta a receber, botão "Recebi" que pergunta:
+  - **Integral ou parcial?** Integral = valor da parcela. Parcial = quanto o cliente pagou agora e **quando vem o restante** (o saldo da parcela fica em aberto com esse novo vencimento; a parcela original é imutável, então o restante vira vencimento próprio sem perder o vínculo com a parcela — cada pagamento gera o seu recibo, número `…-<parcela>-<baixa>` que já existe);
+  - **Em qual conta entrou?** Já vem marcada a **conta do contrato** do cliente (`contracts.bank_account` / `is_contract_default`), sempre confirmando (decidido 08/11);
+  - data = hoje (editável). Ao salvar, entra como entrada no caixa e abre direto o recibo (`/recibos/$id`).
 - **Onde:** Financeiro (contas a receber e aba Financeiro da obra), `register_settlement`/fluxo de baixa existente.
 - **Pronto quando:** da parcela ao recibo aberto em no máximo 2 cliques.
 - **Depende de:** R0-2.
@@ -47,7 +53,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **O que fazer:** proposta (a)+(c): barra grande "Pago X% · Falta Y%" com valores e linha do tempo das parcelas (pagas em verde, a deste recibo destacada, próximas em cinza com valor e data). Dados de `buildReceipt` (`summary`, parcelas), sem números novos.
 - **Onde:** `api/src/pdf/receipt-html.ts`, `src/lib/receipt.ts`.
 - **Pronto quando:** recibo gerado mostra o avanço financeiro visual e bate com o Financeiro.
-- **Depende do Guilherme:** confirmar o formato — (a) barra grande, (b) rosca, (c) linha do tempo das parcelas.
+- **Decidido (08/11):** como no mockup — todas as parcelas do contrato listadas (ex.: 5), as pagas marcadas como pagas (cor + texto), a deste recibo destacada e as demais "a pagar", com a barra pago × falta.
 
 ### [ ] R0-5 · Cronograma mostra as parcelas pagas
 
@@ -89,7 +95,7 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
   - Pendências/executados/próximos serviços deixam de ser textos livres da etapa: viram itens do checklist e Pendências (`work_issues`), que já existem.
 - **Onde:** `components/works/schedule.tsx`, `stage-services.tsx`, `checklist.tsx`, `src/routes/_authenticated/obras.$id.index.tsx`.
 - **Pronto quando:** dá para dizer em uma frase o que cada aba faz; editar etapa, serviço e avanço tem botão visível; nada aparece duplicado entre Etapas, Checklist e Cronograma.
-- **Depende de:** decisões da R0-1. **Depende do Guilherme:** aprovar a junção Etapas + Checklist.
+- **Decidido (08/11):** juntar Etapas e Checklist numa aba só. Fazer junto com a R0-1.
 
 ### [ ] R0-9 · Cronograma interativo da obra (o gráfico do PDF, mas vivo)
 
@@ -114,13 +120,14 @@ Ordem sugerida: R0-2 → R0-3 → R0-4 → R0-5 → R0-7 → R0-1 + R0-8 (juntas
 - **Por quê:** a aba Compras (pedido → chegada → pagamento) não ficou clara. O Guilherme quer a lista dos materiais que foram orçados, etapa por etapa, para ir ticando o que comprou ou o que não precisou, e saber se o material orçado foi mesmo usado.
 - **O que fazer:**
   - a lista nasce do orçamento aprovado: cada material de cada serviço (snapshot `budget_items.materials`: nome, unidade, quantidade, custo) vira uma linha da obra agrupada por etapa; materiais "cliente fornece" aparecem marcados assim e não entram no custo; nova revisão aprovada re-sincroniza sem perder o que já foi marcado (mesma ideia de `sync_budget_stage_services`);
-  - cada linha tem três estados: **a comprar** / **comprei** / **não precisou**; dá para adicionar material que não estava no orçamento ("extra", com motivo);
-  - **"Comprei"** abre um formulário curto (quantidade, valor pago, fornecedor, conta, comprovante) e já lança a saída no Financeiro, categoria Materiais, ligada à etapa e ao material — o gasto é informado num lugar só, nunca duas vezes; pagamento a prazo continua possível (vira conta a pagar, como a compra de hoje);
-  - por etapa e no total: **material orçado × gasto × saldo**, com destaque para material comprado acima do orçado, comprado e não orçado e "não precisou" (economia);
+  - cada linha mostra quantidade comprada × orçada (ex.: **3 de 5 rl**) e continua "a comprar" até completar; não existe estado "não precisou" (decidido 08/11): o que não foi comprado simplesmente fica como **saldo positivo** daquele material/etapa, e quem comprou mais fica com saldo negativo; a linha pode ser encerrada ("compra concluída") para parar de aparecer como pendente;
+  - **"Comprei"** pergunta: quantidade, **"pagou o valor cotado no orçamento ou valor diferente?"** (diferente → informa o valor pago), fornecedor e conta; já lança a saída no Financeiro, categoria Materiais, ligada à etapa e ao material — o gasto é informado num lugar só, nunca duas vezes; pagamento a prazo continua possível (vira conta a pagar);
+  - **compra a mais depois** (ex.: precisou de mais um rolo): "Comprei" de novo na mesma linha ou "+ Material" escolhendo a etapa; entra naquela etapa e abate do saldo dela;
+  - por material, por etapa e no total: **orçado × gasto × saldo** (positivo = economia, negativo = gastou a mais), com destaque para material comprado sem estar no orçamento;
   - aparece como seção "Compras de material" dentro da aba Financeiro da obra; a aba Compras sai.
 - **Onde:** reaproveitar `purchase_orders`/`purchase_lines` (já têm `material_key`) e `financial_entries` (`stage_id`, categoria "Materiais"); tabela nova ou colunas para o estado da linha (a comprar/comprei/não precisou) com GRANT explícito, RLS `can_see_costs` e auditoria; regra pura testada (`src/lib/material-checklist.ts`) para orçado × gasto × saldo; `components/works/purchases.tsx`, `components/works/finance.tsx`.
 - **Pronto quando:** na obra da Caroline a lista mostra os materiais orçados por etapa (ex.: Proteção e sinalização: rolos de lona, fitas), ticar "comprei" lança a saída no Financeiro e o saldo do material da etapa muda na hora; "não precisou" aparece como economia.
-- **Depende do Guilherme:** perguntas 11 e 12 (ver a página de visualização).
+- **Todas as decisões tomadas (08/11) — pronta para começar.**
 
 ---
 
